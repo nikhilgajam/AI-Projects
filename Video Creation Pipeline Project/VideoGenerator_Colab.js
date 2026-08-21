@@ -1,3 +1,20 @@
+/**
+ * VideoGenerator_Colab.js
+ * ─────────────────────────────────────────────────────────────
+ * AI-powered YouTube video pipeline using Google Colab SDXL-Turbo
+ * for high-quality image generation.
+ *
+ * SETUP:
+ *   1. Run colab_image_server.py on Google Colab (free T4 GPU)
+ *   2. Add to .env:  COLAB_API_URL=https://xxxx.ngrok-free.app
+ *   3. Run:  node VideoGenerator_Colab.js
+ *
+ * IMAGE CHAIN:  Colab SDXL-Turbo → Pollinations → Wikipedia → LoremFlickr → Black frame
+ * OUTPUT:       save/<title>.mp4  +  save/<title>.txt  (includes thumbnail prompt)
+ *
+ * No local installs beyond existing npm packages — uses built-in fetch().
+ */
+
 import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
 import sqlite3 from 'sqlite3';
@@ -84,11 +101,103 @@ async function getWikiImage(topic) {
     return null;
 }
 
+/**
+ * Calls the Colab-hosted HuggingFace SDXL-Turbo API to generate an image.
+ * Preserves the target aspect ratio (portrait for Shorts, landscape for Regular)
+ * within SDXL-Turbo's safe VRAM range on a T4 GPU.
+ */
+async function generateColabImage(prompt, outputFile, width, height) {
+    const colabUrl = (process.env.COLAB_API_URL || '').replace(/\/$/, '');
+    if (!colabUrl) throw new Error('COLAB_API_URL not set in .env');
+
+    // Scale to SDXL-Turbo's safe range while preserving aspect ratio.
+    // Longest side = 1024, shortest side snapped to nearest 64px (≥ 512).
+    const snap = (n) => Math.max(512, Math.round(n / 64) * 64);
+    let w, h;
+    if (width >= height) {
+        // Landscape (16:9 Regular) → e.g. 1024x576
+        w = 1024;
+        h = snap((height / width) * 1024);
+    } else {
+        // Portrait (9:16 Shorts) → e.g. 576x1024
+        h = 1024;
+        w = snap((width / height) * 1024);
+    }
+
+    console.log(`   -> [Colab SDXL-Turbo] ${w}x${h} — "${prompt.slice(0, 70)}..."`);
+
+    const response = await fetch(`${colabUrl}/generate-image`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',   // bypass ngrok's HTML interstitial
+        },
+        body: JSON.stringify({ prompt, width: w, height: h, steps: 1, seed: -1 }),
+        signal: AbortSignal.timeout(120_000),   // 2-minute timeout per image
+    });
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => response.statusText);
+        throw new Error(`Colab API ${response.status}: ${errText}`);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length < 1000) throw new Error('Colab returned empty/invalid image');
+
+    await fs.writeFile(outputFile, buffer);
+    console.log(`      [Success] Colab image saved (${(buffer.length / 1024).toFixed(1)} KB)`);
+    return outputFile;
+}
+
+/**
+ * Generates a professional YouTube thumbnail prompt using Gemini.
+ * Returns a text string (no image is created here).
+ * The prompt is saved inside the .txt file in the save folder.
+ */
+async function generateThumbnailPrompt(ytTitle, ytDescription, formatLabel) {
+    const prompt = `You are a professional YouTube ${formatLabel} thumbnail creator.
+
+TITLE: ${ytTitle}
+DESCRIPTION: ${ytDescription.slice(0, 350)}
+
+Write ONLY a single detailed AI image generation prompt for the thumbnail background.
+Requirements:
+- Cinematic composition, high contrast, vibrant eye-catching colors
+- Clear emotional focal point that relates to the topic
+- Professional studio-quality lighting (dramatic, volumetric, or golden hour)
+- Ultra HD, photorealistic, 8K quality
+- Emotionally compelling — makes the viewer stop scrolling and click
+- Do NOT include any text, words, letters, titles, or watermarks in the scene
+- Just describe the visual scene with rich detail
+
+Return ONLY the image prompt. No explanation, no extra text.`;
+
+    try {
+        const result = await generateScript(prompt);
+        if (result?.trim().length > 15) return result.trim();
+    } catch {}
+
+    // Sensible fallback
+    return `${ytTitle} — dramatic cinematic close-up, ultra HD 8K, vibrant high-contrast colors, professional dramatic lighting, photorealistic, eye-catching`;
+}
+
+
 async function generateInternetImage(phrase, fallbackWord, outputFile, index, width, height) {
+    // ── Priority 1: Colab HuggingFace (SDXL-Turbo) ─────────────────────────
+    if (process.env.COLAB_API_URL) {
+        try {
+            return await generateColabImage(phrase, outputFile, width, height);
+        } catch (e) {
+            console.warn(`      [Colab Failed] ${e.message.split('\n')[0]}. Falling back to internet sources.`);
+        }
+    }
+
+    // ── Priority 2–4: Pollinations → Wikipedia → LoremFlickr ───────────────
     try {
         let imageUrl = null;
         let finalSource = '';
-        // 1. Try Pollinations AI first (Turbo model)
+
+        // 2. Pollinations AI
         const prompt = encodeURIComponent(phrase);
         imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&model=turbo&nologo=true`;
         console.log(`   -> [Attempting] Pollinations AI: ${imageUrl}`);
@@ -100,7 +209,7 @@ async function generateInternetImage(phrase, fallbackWord, outputFile, index, wi
             }
         });
 
-        // 2. Try Wikipedia Commons
+        // 3. Wikipedia Commons
         if (!response.ok || (await response.clone().arrayBuffer()).byteLength < 5000) {
             console.log(`      [Failed] Pollinations AI. Falling back to Wikipedia for word: ${fallbackWord}`);
             imageUrl = await getWikiImage(fallbackWord);
@@ -112,7 +221,7 @@ async function generateInternetImage(phrase, fallbackWord, outputFile, index, wi
             finalSource = 'Pollinations';
         }
         
-        // 3. If no Wikipedia image, fallback to LoremFlickr
+        // 4. LoremFlickr
         if ((!imageUrl || !response.ok) && finalSource !== 'Pollinations') {
             if (imageUrl) console.log(`      [Failed] Wikipedia.`);
             imageUrl = `https://loremflickr.com/${width}/${height}/${encodeURIComponent(fallbackWord)}?random=${Date.now() + index}`;
@@ -154,6 +263,7 @@ async function generateInternetImage(phrase, fallbackWord, outputFile, index, wi
         console.warn(`\n [!] Internet image failed (${e.message.split('\n')[0]}). Using local fallback.`);
     }
     
+    // ── Priority 5: Local black-frame fallback ───────────────────────────────
     return generateLocalFallbackImage(outputFile, phrase, index, width, height);
 }
 
@@ -316,19 +426,44 @@ function assembleVideo(audioPath, imagePaths, outputPath, resolution, durationPe
  * Main Generation Loop
  */
 async function main() {
-    console.log("Welcome to the 100% Free Auto-Video Pipeline (Node.js Edition)");
+    console.log("Welcome to the 100% Free Auto-Video Pipeline (Colab Edition)");
     const rl = readline.createInterface({ input, output });
 
     const channelName = process.env.YOUTUBE_CHANNEL_NAME || 'Nikhil Tech';
     const tempDir = await ensureDirectory(TEMP_DIR);
     const saveDir = await ensureDirectory(SAVE_DIR);
-    
+
+    // ── Colab API health check ────────────────────────────────────────────────
+    if (process.env.COLAB_API_URL) {
+        const colabUrl = process.env.COLAB_API_URL.replace(/\/$/, '');
+        console.log(`\n[Colab] Checking connection to: ${colabUrl}`);
+        try {
+            const healthRes = await fetch(`${colabUrl}/health`, {
+                signal: AbortSignal.timeout(10_000),
+                headers: { 'ngrok-skip-browser-warning': 'true' },
+            });
+
+            const health = await healthRes.json();
+            if (health.status === 'loading') {
+                console.log('[Colab] ⚠  Model is still loading on Colab. First image may take ~60s.');
+            } else {
+                console.log(`[Colab] ✅ Connected! Model: ${health.model} | Device: ${health.device}`);
+            }
+        } catch (e) {
+            console.warn(`[Colab] ⚠  Could not reach Colab API (${e.message}). Will fall back to internet images.`);
+        }
+    } else {
+        console.log('[Colab] ℹ  COLAB_API_URL not set. Using Pollinations/Wikipedia/LoremFlickr for images.');
+        console.log('           To enable Colab AI images: run colab_image_server.py on Colab and set COLAB_API_URL in .env\n');
+    }
+
     // Setup SQLite
     const db = await setupDatabase();
 
     // 1. Format Selection
     const vFormat = await rl.question("Choose format - [1] Shorts (9:16) [2] Wide (16:9): ");
     const resolution = vFormat === '1' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+    const formatLabel = vFormat === '1' ? 'Short' : 'Regular';
 
     // 2. Topic Selection
     console.log("\nBrainstorming fresh, trending video categories...");
@@ -370,7 +505,10 @@ async function main() {
     await db.run('INSERT OR IGNORE INTO trends (topic) VALUES (?)', selectedTopic);
 
     console.log(`\nGenerating ideas via Gemini for: ${selectedTopic}...`);
-    const prompt = `Suggest 5 concise, highly unique video ideas about ${selectedTopic}. Ensure the ideas are completely different from common tropes. (Randomization seed: ${Math.random()}). Return only the titles.`;
+    const prompt = `Suggest 5 concise, highly unique video ideas about "${selectedTopic}". 
+Ensure the ideas are completely different from common YouTube tropes and explore fascinating, lesser-known angles. 
+Focus on high viewer retention and curiosity. (Randomization seed: ${Math.random()}). 
+Return ONLY the titles, one per line.`;
     const ideasText = await generateScript(prompt);
     
     console.log(`\nSelected Themes:\n${ideasText}\n`);
@@ -397,19 +535,37 @@ async function main() {
         try {
             // A. Script
             console.log(` - Writing script for: ${topic}`);
-            const scriptPrompt = `Write a completely unique, highly engaging 60-second YouTube script about "${topic}" without formatting or director notes. Make it fresh, dynamic, and unpredictable. (Randomization seed: ${Math.random()}).`;
+            const scriptPrompt = `Write a completely unique, highly engaging 60-second YouTube script about "${topic}".
+No formatting, no markdown, no director notes, no sound effects. Just the spoken words.
+Make the hook incredible. Make it fast-paced, dynamic, and unpredictable.
+Speak naturally, as a passionate storyteller.
+(Randomization seed: ${Math.random()}).`;
             const script = await generateScript(scriptPrompt);
             const finalScript = `${String(script || '').trim()} ${channelName ? `Like, share and subscribe to ${channelName}.` : 'Like, share and subscribe to this channel.'}`;
             
             // Generate keywords for images using Gemini
-            console.log(` - Generating detailed image prompts and fallbacks for: ${topic}`);
-            const keywordPrompt = `Generate exactly 10 ideas for images related to the topic: "${topic}".
-            For each idea, provide a detailed 3-to-4 word visual phrase for AI generation, followed by a single very broad, common noun (like 'planet', 'history', 'person') for a basic image search.
-            Format each line exactly like this:
-            PHRASE|WORD
-            Example:
-            dark starry night sky|stars
-            Return exactly 10 lines with no other text.`;
+            console.log(` - Generating 20 synchronized AI image prompts based on the script...`);
+            const keywordPrompt = `Here is the voiceover script for a YouTube video about "${topic}":
+---
+${finalScript}
+---
+
+Divide the script chronologically into exactly 20 equal segments. 
+For each segment, generate a visual scene that perfectly matches what the narrator is saying at that moment.
+
+For each of the 20 scenes provide:
+1. A DETAILED AI image generation prompt (20–30 words) — cinematic, specific lighting, mood, colors, style, ultra HD quality.
+2. A single broad fallback noun (e.g. 'space', 'city', 'nature').
+
+Format each line EXACTLY like this (nothing else, no numbering, no prefix):
+PROMPT|WORD
+
+Example format:
+dramatic close-up of a glowing neural network brain with electric blue circuits on dark background, cinematic lighting, ultra HD, 8k|technology
+vast ancient Roman colosseum at golden hour with crowds, epic wide angle, warm sunlight, photorealistic, cinematic|history
+
+Return EXACTLY 20 lines.`;
+
             
             const keywordsText = await generateScript(keywordPrompt);
             const generatedKeywords = keywordsText.split('\n')
@@ -422,11 +578,11 @@ async function main() {
                     };
                 })
                 .filter(k => k.word.length > 2)
-                .slice(0, 10);
+                .slice(0, 20);
             
-            // Fallback if AI fails to generate 10 valid pairs
-            while (generatedKeywords.length < 10) {
-                generatedKeywords.push({ phrase: `${topic} visually cinematic`, word: topic.split(' ')[0] || 'nature' });
+            // Fallback if AI fails to generate 20 valid pairs
+            while (generatedKeywords.length < 20) {
+                generatedKeywords.push({ phrase: `${topic} cinematic ultra HD dramatic lighting professional`, word: topic.split(' ')[0] || 'nature' });
             }
             
             console.log(`   -> Using Instructions:`);
@@ -461,18 +617,21 @@ async function main() {
             const durationPerImage = audioDuration / generatedKeywords.length;
 
             // C. Media
-            console.log(` - Downloading free topic images...`);
+            console.log(` - Generating AI images via Colab (or internet fallback)...`);
             const topicImages = await getTopicImageSet(topic, generatedKeywords, resolution.width, resolution.height, tempDir);
             
             // D & E. Assembly and Export
             console.log(` - Assembling video via ffmpeg with transitions...`);
             await assembleVideo(audioPath, topicImages, outputName, resolution, durationPerImage, audioDuration);
             
-            // Save Description
-            await fs.writeFile(descName, `TITLE: ${ytTitle}\n\nDESCRIPTION:\n${ytDescription}`);
+            // F. Thumbnail Prompt
+            const thumbPrompt = await generateThumbnailPrompt(ytTitle, ytDescription, formatLabel);
+            
+            // Save Description and Thumbnail Prompt
+            await fs.writeFile(descName, `TITLE: ${ytTitle}\n\nDESCRIPTION:\n${ytDescription}\n\nTHUMBNAIL PROMPT:\n${thumbPrompt}`);
             
             console.log(`[Success] Saved ${outputName}`);
-            console.log(`[Success] Saved ${descName}`);
+            console.log(`[Success] Saved ${descName} (with thumbnail prompt)`);
             summary.success.push(`"${ytTitle}" -> ${safeTitle}.mp4`);
             
         } catch (err) {
