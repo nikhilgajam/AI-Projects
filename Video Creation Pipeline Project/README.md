@@ -13,6 +13,7 @@ An intelligent, fully automated Node.js application that runs an end-to-end vide
 - **🎙️ Studio-Grade Voiceovers:** Uses Microsoft `edge-tts` to generate premium neural voiceovers completely offline. Supports multiple languages and voices (Hindi, Tamil, Telugu, English, etc.).
 - **🎬 Cinematic Assembly:** Seamlessly stitches the audio and dynamic images together using `ffmpeg`, complete with perfectly timed `xfade` (crossfade) video transitions.
 - **📈 SEO Meta-Data Extraction:** Generates extremely click-worthy YouTube titles and SEO-optimized descriptions with hashtags. Saves them in a ready-to-copy `.txt` file perfectly alongside your rendered `.mp4`.
+- **Perfect Voice-to-Image Sync:** (Custom Mode) Dynamically extracts word-level timestamps from `.vtt` subtitles to mathematically guarantee images transition precisely when the narrator speaks the related script segment—completely eliminating "quick flipping" desync issues!
 - **🗃️ Topic Tracking Database:** Uses a local SQLite database (`trends.db`) to ensure the same video topics are not generated twice across sessions.
 - **☁️ Colab Integration (Optional):** Want better quality? Run the included Colab python server scripts to generate high-quality Stable Diffusion images or AI videos, then connect them via your `.env` file using the Colab specific Node.js generators.
 
@@ -57,6 +58,16 @@ Simply execute the main script for the default free generation:
 node VideoGenerator.js
 ```
 
+### 🎯 Custom Precision Generation (Perfect Sync)
+If you want to generate a video on a highly specific topic, for an exact duration, with perfectly synchronized pacing (avoids "quick flipping" of images):
+```bash
+node VideoGenerator_Custom.js
+```
+1. **Format Selection:** Choose either Shorts (9:16) or Standard Wide (16:9).
+2. **Duration:** Enter exact video duration (e.g., `60`).
+3. **Custom Theme:** Enter your custom topic (e.g., `Future of AI in medicine`).
+The engine will chop the script chronologically and mathematically sync each image to the generated `.vtt` subtitles!
+
 ### ☁️ Using Google Colab for High-Quality Generation
 If you want to use HuggingFace models for Image or Video generation via Colab:
 1. Upload and run `colab_image_server.py` or `colab_video_server.py` on a Google Colab instance with a T4 GPU.
@@ -90,11 +101,7 @@ To use regional voices (like Hindi, Tamil, Telugu), open `VideoGenerator.js`, lo
 
 *(Tip: To see all available global voices, run `edge-tts --list-voices` in your terminal).*
 
-## 🛑 License
-
-This script is provided for educational and open-source automation purposes. Please respect API rate limits and copyright policies regarding generated media.
-
-## Thumbnail creation Prompt:
+## Thumbnail creation Prompts:
 
 ```text
 You're a professional youtube short thumbnail creator
@@ -102,3 +109,12 @@ You're a professional youtube short thumbnail creator
 Create a HD Youtube Short optimized thumbnail using with the title and right image
 And the text shouldn't be at the extreme top and extreme bottom so that users can view
 ```
+
+```text
+You're a professional youtube thumbnail creator
+Create a Youtube Wide Full Screen Thumbnail Optimized for larger audience
+```
+
+## 🛑 License
+
+This script is provided for educational and open-source automation purposes. Please respect API rate limits and copyright policies regarding generated media.
