@@ -62,8 +62,10 @@ pipe        = None
 model_ready = threading.Event()
 
 # ── Request schema ───────────────────────────────────────────
+from typing import Optional
 class ImageRequest(BaseModel):
     prompt: str
+    negative_prompt: Optional[str] = ""
     width:  int = 1024
     height: int = 1024
     steps:  int = 1     # SDXL-Turbo works best with 1 step
@@ -122,13 +124,22 @@ def generate_image(req: ImageRequest):
         generator = torch.Generator(device="cuda").manual_seed(req.seed)
 
     with torch.inference_mode():
+        cfg = 0.0
+        steps = req.steps
+        kwargs = {}
+        if req.negative_prompt:
+            cfg = 1.5
+            steps = max(3, req.steps)
+            kwargs["negative_prompt"] = req.negative_prompt
+
         result = pipe(
             prompt=req.prompt,
-            num_inference_steps=req.steps,
-            guidance_scale=0.0,     # CFG-free inference for SDXL-Turbo
+            num_inference_steps=steps,
+            guidance_scale=cfg,
             width=w,
             height=h,
             generator=generator,
+            **kwargs
         )
 
     image: Image.Image = result.images[0]

@@ -1,0 +1,16 @@
+{
+  "name": "node_rag",
+  "version": "1.0.0",
+  "description": "RAG implementation in Node.js",
+  "main": "retrieve.js",
+  "scripts": {
+    "load": "node load_data.js",
+    "retrieve": "node retrieve.js"
+  },
+  "dependencies": {
+    "@google/genai": "^0.1.2",
+    "dotenv": "^16.4.5",
+    "pdf-parse": "^1.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}

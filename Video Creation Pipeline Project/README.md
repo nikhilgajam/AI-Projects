@@ -61,7 +61,7 @@ node VideoGenerator.js
 ### 🎯 Custom Precision Generation (Perfect Sync)
 If you want to generate a video on a highly specific topic, for an exact duration, with perfectly synchronized pacing (avoids "quick flipping" of images):
 ```bash
-node VideoGenerator_Custom.js
+node CustomVideoGenerator.js
 ```
 1. **Format Selection:** Choose either Shorts (9:16) or Standard Wide (16:9).
 2. **Duration:** Enter exact video duration (e.g., `60`).
@@ -73,7 +73,7 @@ If you want to use HuggingFace models for Image or Video generation via Colab:
 1. Upload and run `colab_image_server.py` or `colab_video_server.py` on a Google Colab instance with a T4 GPU.
 2. Copy the resulting `ngrok` URL into your `.env` file as `COLAB_API_URL`.
 3. Run the corresponding generator:
-   - For Colab Images: `node VideoGenerator_Colab.js`
+   - For Colab Images: `node RandomVideoGenerator_Colab.js`
    - For Colab AI Video: `node VideoGeneratorWithAIVideo_Colab.js`
 
 ### Step-by-step Execution (when running):

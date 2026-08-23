@@ -87,17 +87,44 @@ async function generateColabImage(prompt, outputFile, width, height) {
     const colabUrl = (process.env.COLAB_API_URL || '').replace(/\/$/, '');
     if (!colabUrl) throw new Error('COLAB_API_URL not set in .env');
 
-    const snap = (n) => Math.max(512, Math.round(n / 64) * 64);
+    // Aspect-ratio-aware scaling. SDXL-Turbo natively prefers ~512px. Generating at 1024px causes face deformation and cloned bodies.
     let w, h;
-    if (width >= height) {
-        w = 1024;
-        h = snap((height / width) * 1024);
-    } else {
-        h = 1024;
-        w = snap((width / height) * 1024);
-    }
+    if (width >= height) { w = 768; h = 512; }
+    else                 { h = 768; w = 512; }
 
     console.log(`   -> [Colab SDXL-Turbo] ${w}x${h} — "${prompt.slice(0, 70)}..."`);
+
+    
+    let enhancedPrompt = prompt;
+    const lowerPrompt = prompt.toLowerCase();
+    
+    const baseStyle = "masterpiece, best quality, ultra-detailed, 8k uhd, cinematic lighting, photorealistic, sharp focus";
+    let humanFraming = "extreme close-up portrait headshot, 85mm lens, sharp focus on face, hyper-detailed beautiful realistic face, flawless symmetrical eyes, perfect facial proportions, clear distinct features, depth of field";
+    let textFraming = "close up shot, sharp focus on text, perfectly flat and clear, centered";
+    let defaultFraming = (width >= height) ? "wide horizontal landscape, centered composition" : "epic scenic shot, expansive environment, perfectly proportioned, centered composition";
+    
+    let finalNeg = "nsfw, nude, naked, exposed, bare chest, stretching, stretched, elongated, distorted proportions, bobblehead, giant head, disproportionate, double body, double hands, extra hands, missing hands, double heads, extra limbs, disconnected limbs, twin, cloned, duplicate, mutated, ugly, poorly drawn face, deformed face, asymmetric face, cross-eyed, badly drawn hands, multiple people, out of frame, bad anatomy, malformed joints, deformed animal";
+
+    let isPlural = lowerPrompt.includes('people') || lowerPrompt.includes('men') || lowerPrompt.includes('women') || lowerPrompt.includes('children') || lowerPrompt.includes('crowd') || lowerPrompt.includes('group') || lowerPrompt.includes('friends') || lowerPrompt.includes('couple');
+    let isSingular = lowerPrompt.includes('person') || lowerPrompt.includes('man') || lowerPrompt.includes('woman') || lowerPrompt.includes('boy') || lowerPrompt.includes('girl') || lowerPrompt.includes('human') || lowerPrompt.includes('god');
+
+    if (isPlural) {
+        enhancedPrompt = `${prompt}, multiple distinct people, fully clothed, modest attire, cinematic medium shot, clear distinct faces, highly detailed, perfect human anatomy, ${baseStyle}`;
+        finalNeg = finalNeg.replace(", multiple people", "");
+    } else if (isSingular) {
+        enhancedPrompt = `${prompt}, solo, 1boy/1girl, one distinct person, fully clothed, wearing detailed appropriate clothing, modest attire, ${humanFraming}, perfect human anatomy, stunningly beautiful realistic face, highly detailed face, flawless symmetrical features, ${baseStyle}`;
+    } else if (lowerPrompt.includes('animal') || lowerPrompt.includes('dog') || lowerPrompt.includes('cat') || lowerPrompt.includes('bird') || lowerPrompt.includes('wildlife') || lowerPrompt.includes('creature')) {
+        enhancedPrompt = `${prompt}, ${defaultFraming}, perfect animal anatomy, highly detailed fur and features, realistic, ${baseStyle}`;
+    } else {
+        enhancedPrompt = `${prompt}, ${defaultFraming}, ${baseStyle}`;
+    }
+
+    if (lowerPrompt.includes('text') || lowerPrompt.includes('sign') || lowerPrompt.includes('word') || lowerPrompt.includes('number') || lowerPrompt.includes('letter') || lowerPrompt.includes('writing')) {
+        enhancedPrompt += `, ${textFraming}, clear legible text, correct spelling, perfectly formed letters and numbers, sharp typography, meaningful text`;
+        finalNeg += ", gibberish, illegible, unreadable, bad spelling, scrambled letters, garbled text";
+    } else {
+        finalNeg += ", text, signature, watermark, letters, numbers, words, gibberish";
+    }
 
     const response = await fetch(`${colabUrl}/generate-image`, {
         method: 'POST',
@@ -105,7 +132,7 @@ async function generateColabImage(prompt, outputFile, width, height) {
             'Content-Type': 'application/json',
             'ngrok-skip-browser-warning': 'true',
         },
-        body: JSON.stringify({ prompt, width: w, height: h, steps: 1, seed: -1 }),
+        body: JSON.stringify({ prompt: enhancedPrompt, negative_prompt: finalNeg, width: w, height: h, steps: 4, seed: -1 }),
         signal: AbortSignal.timeout(120_000),
     });
 
@@ -203,7 +230,7 @@ async function generateInternetImage(phrase, fallbackWord, outputFile, index, wi
                 ffmpeg()
                     .input(tempFile)
                     .videoFilters([
-                        `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black`
+                        `scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height}`
                     ])
                     .outputOptions(['-frames:v', '1', '-q:v', '2'])
                     .save(outputFile)
@@ -283,6 +310,7 @@ function parseVtt(vttString) {
 }
 
 function calculateImageTimes(cues, segments, audioDuration) {
+    let safeAudioDuration = (isNaN(audioDuration) || audioDuration <= 0) ? segments.length * 4 : audioDuration;
     const imageTimes = [0];
     const N = segments.length;
     if (N <= 1) return imageTimes;
@@ -296,7 +324,7 @@ function calculateImageTimes(cues, segments, audioDuration) {
     let targetLength = segments[0].length * ratio;
     
     // Calculate a dynamic minimum gap to prevent fast flipping, e.g. 60% of average duration
-    const avgDuration = audioDuration / N;
+    const avgDuration = safeAudioDuration / N;
     const minGap = Math.max(0.5, avgDuration * 0.6);
 
     for (let i = 0; i < cues.length; i++) {
@@ -324,7 +352,7 @@ function calculateImageTimes(cues, segments, audioDuration) {
     
     while (imageTimes.length < N) {
         let t = imageTimes[imageTimes.length - 1] + minGap;
-        if (t > audioDuration - 0.6) {
+        if (t > safeAudioDuration - 0.6) {
             t = imageTimes[imageTimes.length - 1] + 0.6;
         }
         imageTimes.push(t);
@@ -333,8 +361,8 @@ function calculateImageTimes(cues, segments, audioDuration) {
     return imageTimes;
 }
 
-async function generateFreeAudio(text, outputFile) {
-    const voice  = process.env.EDGE_TTS_VOICE  || 'en-US-AriaNeural';
+async function generateFreeAudio(text, outputFile, selectedVoice) {
+    const voice = selectedVoice || process.env.EDGE_TTS_VOICE || 'en-US-AriaNeural';
     const rate   = process.env.EDGE_TTS_RATE   || '-5%';
     const pitch  = process.env.EDGE_TTS_PITCH  || '-2Hz';
     const volume = process.env.EDGE_TTS_VOLUME || '+0%';
@@ -369,18 +397,20 @@ function assembleVideo(audioPath, imagePaths, outputPath, resolution, imageTimes
         try {
             const command = ffmpeg();
             const N = imagePaths.length;
+            let safeAudioDuration = (isNaN(audioDuration) || audioDuration <= 0) ? N * 4 : audioDuration;
             
             for (let i = 0; i < N; i++) {
                 command.input(imagePaths[i]);
                 
                 let duration_i;
                 if (i === 0) {
-                    duration_i = (N > 1) ? imageTimes[1] : audioDuration;
+                    duration_i = (N > 1) ? imageTimes[1] : safeAudioDuration;
                 } else if (i < N - 1) {
                     duration_i = imageTimes[i+1] - imageTimes[i] + 0.5;
                 } else {
-                    duration_i = audioDuration - imageTimes[i] + 0.5;
+                    duration_i = safeAudioDuration - imageTimes[i] + 0.5;
                 }
+                duration_i = Math.max(0.5, duration_i);
                 
                 command.inputOptions(['-loop', '1', '-framerate', '30', '-t', `${duration_i.toFixed(3)}`]);
             }
@@ -388,14 +418,14 @@ function assembleVideo(audioPath, imagePaths, outputPath, resolution, imageTimes
             
             let filtergraph = '';
             for (let i = 0; i < N; i++) {
-                filtergraph += `[${i}:v]scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=decrease,pad=${resolution.width}:${resolution.height}:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p[v${i}]; `;
+                filtergraph += `[${i}:v]scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=increase,crop=${resolution.width}:${resolution.height},format=yuv420p[v${i}]; `;
             }
 
             let lastOut = `[v0]`;
 
             for (let i = 1; i < N; i++) {
                 const nextOut = `[x${i}]`;
-                const offset = imageTimes[i] - 0.5;
+                const offset = Math.max(0, imageTimes[i] - 0.5);
                 filtergraph += `${lastOut}[v${i}]xfade=transition=fade:duration=0.5:offset=${offset.toFixed(3)}${nextOut}; `;
                 lastOut = nextOut;
             }
@@ -455,6 +485,27 @@ async function main() {
     const vFormat = await rl.question("\nChoose format - [1] Shorts (9:16) [2] Regular/Wide (16:9): ");
     const resolution = vFormat === '1' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
     const formatLabel = vFormat === '1' ? 'Short' : 'Regular';
+    // Language & Voice
+    const langInput = await rl.question("\nEnter language (default: english): ");
+    const language = langInput.trim().toLowerCase() || 'english';
+    
+    const voiceInput = await rl.question("Enter voice gender - [M]ale / [F]emale (default: female): ");
+    const voiceGender = voiceInput.trim().toLowerCase().startsWith('m') ? 'male' : 'female';
+    
+    const VOICES = {
+        'english': { male: 'en-US-DavisNeural', female: 'en-US-AriaNeural' },
+        'hindi': { male: 'hi-IN-MadhurNeural', female: 'hi-IN-SwaraNeural' },
+        'telugu': { male: 'te-IN-MohanNeural', female: 'te-IN-ShrutiNeural' },
+        'tamil': { male: 'ta-IN-ValluvarNeural', female: 'ta-IN-PallaviNeural' }
+    };
+
+    let selectedVoice = 'en-US-AriaNeural';
+    if (VOICES[language]) {
+        selectedVoice = VOICES[language][voiceGender];
+    } else {
+        console.log(`Language "${language}" not explicitly supported for TTS mapping, defaulting to English voice.`);
+    }
+
 
     // 2. Duration
     const durationStr = await rl.question("Enter estimated video duration in seconds (e.g., 60): ");
@@ -475,7 +526,7 @@ async function main() {
         console.log(` - Writing script...`);
         // A rough rule of thumb: ~2.5 words per second
         const wordCount = Math.round(duration * 2.5);
-        const scriptPrompt = `Write a completely unique, highly engaging YouTube script about "${selectedTheme}".
+        const scriptPrompt = `Write a completely unique, highly engaging YouTube script about "${selectedTheme}"" in ${language}.
 The script should take exactly ${duration} seconds to read at a normal, engaging pace (approximately ${wordCount} words).
 No formatting, no markdown, no director notes, no sound effects. Just the spoken words.
 Make the hook incredible. Make it fast-paced, dynamic, and unpredictable.
@@ -520,7 +571,7 @@ ${segmentsText}
 For EVERY single segment, generate a visual scene that perfectly matches what the narrator is saying at that EXACT moment AND strictly adheres to the core theme "${selectedTheme}". Do not generate random disconnected images. Every image must clearly relate to the main theme.
 
 For each of the ${imageCount} segments provide:
-1. A DETAILED AI image generation prompt (20–40 words) — highly specific visualization, cinematic composition, precise lighting, mood, vibrant colors, ultra HD quality, visually stunning.
+1. A highly optimized SDXL image prompt (20-40 words). Format strictly as: "[Main Subject], [Environment/Setting], [Style/Medium], [Lighting], [Resolution/Quality]". Example: "A majestic astronaut floating in space, glowing nebula background, cinematic photography, dramatic rim lighting, 8k resolution." (CRITICAL: For humans/gods, YOU MUST use "solo, one person, distant wide-angle shot, full body" and strictly AVOID "close up", "face", or "portrait" to prevent AI mutations.).
 2. A single broad fallback noun related to the theme (e.g. 'space', 'technology', 'nature').
 
 Format each line EXACTLY like this (nothing else, no numbering, no prefix):
@@ -577,7 +628,7 @@ DESCRIPTION: <description here>`;
         // B. Audio
         console.log(` - Generating Edge TTS audio...`);
         const audioPath = path.join(tempDir, `custom_audio_${Date.now()}.mp3`);
-        const { vtt } = await generateFreeAudio(finalScript, audioPath);
+        const { vtt } = await generateFreeAudio(finalScript, audioPath, selectedVoice);
         
         const audioDuration = await getAudioDuration(audioPath);
         const cues = parseVtt(vtt);

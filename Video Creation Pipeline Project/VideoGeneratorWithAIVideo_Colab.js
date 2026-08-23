@@ -117,18 +117,48 @@ async function generateColabImage(prompt, outputFile, width, height) {
     const colabUrl = (process.env.COLAB_API_URL || '').replace(/\/$/, '');
     if (!colabUrl) throw new Error('COLAB_API_URL not set in .env');
 
-    // Aspect-ratio-aware scaling within SDXL-Turbo's T4 VRAM limits
-    const snap = (n) => Math.max(512, Math.round(n / 64) * 64);
+    // Aspect-ratio-aware scaling. SDXL-Turbo natively prefers ~512px. Generating at 1024px causes face deformation and cloned bodies.
     let w, h;
-    if (width >= height) { w = 1024; h = snap((height / width) * 1024); }
-    else                  { h = 1024; w = snap((width / height) * 1024); }
+    if (width >= height) { w = 768; h = 512; }
+    else                 { h = 768; w = 512; }
 
     console.log(`   -> [Colab SDXL] ${w}x${h} — "${prompt.slice(0, 60)}..."`);
+    
+    let enhancedPrompt = prompt;
+    const lowerPrompt = prompt.toLowerCase();
+    
+    const baseStyle = "masterpiece, best quality, ultra-detailed, 8k uhd, cinematic lighting, photorealistic, sharp focus";
+    let humanFraming = "extreme close-up portrait headshot, 85mm lens, sharp focus on face, hyper-detailed beautiful realistic face, flawless symmetrical eyes, perfect facial proportions, clear distinct features, depth of field";
+    let textFraming = "close up shot, sharp focus on text, perfectly flat and clear, centered";
+    let defaultFraming = (width >= height) ? "wide horizontal landscape, centered composition" : "epic scenic shot, expansive environment, perfectly proportioned, centered composition";
+    
+    let finalNeg = "nsfw, nude, naked, exposed, bare chest, stretching, stretched, elongated, distorted proportions, bobblehead, giant head, disproportionate, double body, double hands, extra hands, missing hands, double heads, extra limbs, disconnected limbs, twin, cloned, duplicate, mutated, ugly, poorly drawn face, deformed face, asymmetric face, cross-eyed, badly drawn hands, multiple people, out of frame, bad anatomy, malformed joints, deformed animal";
+
+    let isPlural = lowerPrompt.includes('people') || lowerPrompt.includes('men') || lowerPrompt.includes('women') || lowerPrompt.includes('children') || lowerPrompt.includes('crowd') || lowerPrompt.includes('group') || lowerPrompt.includes('friends') || lowerPrompt.includes('couple');
+    let isSingular = lowerPrompt.includes('person') || lowerPrompt.includes('man') || lowerPrompt.includes('woman') || lowerPrompt.includes('boy') || lowerPrompt.includes('girl') || lowerPrompt.includes('human') || lowerPrompt.includes('god');
+
+    if (isPlural) {
+        enhancedPrompt = `${prompt}, multiple distinct people, fully clothed, modest attire, cinematic medium shot, clear distinct faces, highly detailed, perfect human anatomy, ${baseStyle}`;
+        finalNeg = finalNeg.replace(", multiple people", "");
+    } else if (isSingular) {
+        enhancedPrompt = `${prompt}, solo, 1boy/1girl, one distinct person, fully clothed, wearing detailed appropriate clothing, modest attire, ${humanFraming}, perfect human anatomy, stunningly beautiful realistic face, highly detailed face, flawless symmetrical features, ${baseStyle}`;
+    } else if (lowerPrompt.includes('animal') || lowerPrompt.includes('dog') || lowerPrompt.includes('cat') || lowerPrompt.includes('bird') || lowerPrompt.includes('wildlife') || lowerPrompt.includes('creature')) {
+        enhancedPrompt = `${prompt}, ${defaultFraming}, perfect animal anatomy, highly detailed fur and features, realistic, ${baseStyle}`;
+    } else {
+        enhancedPrompt = `${prompt}, ${defaultFraming}, ${baseStyle}`;
+    }
+
+    if (lowerPrompt.includes('text') || lowerPrompt.includes('sign') || lowerPrompt.includes('word') || lowerPrompt.includes('number') || lowerPrompt.includes('letter') || lowerPrompt.includes('writing')) {
+        enhancedPrompt += `, ${textFraming}, clear legible text, correct spelling, perfectly formed letters and numbers, sharp typography, meaningful text`;
+        finalNeg += ", gibberish, illegible, unreadable, bad spelling, scrambled letters, garbled text";
+    } else {
+        finalNeg += ", text, signature, watermark, letters, numbers, words, gibberish";
+    }
 
     const res = await fetch(`${colabUrl}/generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-        body: JSON.stringify({ prompt, width: w, height: h, steps: 1, seed: -1 }),
+        body: JSON.stringify({ prompt: enhancedPrompt, negative_prompt: finalNeg, width: w, height: h, steps: 4, seed: -1 }),
         signal: AbortSignal.timeout(120_000),
     });
     if (!res.ok) throw new Error(`SDXL API ${res.status}: ${await res.text().catch(() => res.statusText)}`);
@@ -412,9 +442,9 @@ async function setupDatabase() {
 
 // ── Edge TTS (reused) ─────────────────────────────────────────────────────────
 
-async function generateFreeAudio(text, outputFile) {
+async function generateFreeAudio(text, outputFile, selectedVoice) {
     const safeText = text.replace(/"/g, '\\"');
-    const voice    = process.env.EDGE_TTS_VOICE  || 'en-US-AriaNeural';
+    const voice = selectedVoice || process.env.EDGE_TTS_VOICE || 'en-US-AriaNeural';
     const rate     = process.env.EDGE_TTS_RATE   || '-5%';
     const pitch    = process.env.EDGE_TTS_PITCH  || '-2Hz';
     const volume   = process.env.EDGE_TTS_VOLUME || '+0%';
@@ -487,6 +517,35 @@ async function main() {
         ? { width: 1080, height: 1920 }
         : { width: 1920, height: 1080 };
     const formatLabel = vFormat === '1' ? 'Short' : 'Regular';
+    // Language & Voice
+    const langInput = await rl.question("\nEnter language (default: english): ");
+    const language = langInput.trim().toLowerCase() || 'english';
+    
+    const voiceInput = await rl.question("Enter voice gender - [M]ale / [F]emale (default: female): ");
+    const voiceGender = voiceInput.trim().toLowerCase().startsWith('m') ? 'male' : 'female';
+    
+    const VOICES = {
+        'english': { male: 'en-US-ChristopherNeural', female: 'en-US-AriaNeural' },
+        'spanish': { male: 'es-ES-AlvaroNeural', female: 'es-ES-ElviraNeural' },
+        'french': { male: 'fr-FR-HenriNeural', female: 'fr-FR-DeniseNeural' },
+        'german': { male: 'de-DE-ConradNeural', female: 'de-DE-KatjaNeural' },
+        'hindi': { male: 'hi-IN-MadhurNeural', female: 'hi-IN-SwaraNeural' },
+        'italian': { male: 'it-IT-DiegoNeural', female: 'it-IT-ElsaNeural' },
+        'portuguese': { male: 'pt-BR-AntonioNeural', female: 'pt-BR-FranciscaNeural' },
+        'japanese': { male: 'ja-JP-KeitaNeural', female: 'ja-JP-NanamiNeural' },
+        'korean': { male: 'ko-KR-InJoonNeural', female: 'ko-KR-SunHiNeural' },
+        'chinese': { male: 'zh-CN-YunxiNeural', female: 'zh-CN-XiaoxiaoNeural' },
+        'arabic': { male: 'ar-SA-HamedNeural', female: 'ar-SA-ZariyahNeural' },
+        'russian': { male: 'ru-RU-DmitryNeural', female: 'ru-RU-SvetlanaNeural' }
+    };
+
+    let selectedVoice = 'en-US-AriaNeural';
+    if (VOICES[language]) {
+        selectedVoice = VOICES[language][voiceGender];
+    } else {
+        console.log(`Language "${language}" not explicitly supported for TTS mapping, defaulting to English voice.`);
+    }
+
 
     // 2. Topic
     console.log('\nBrainstorming trending video categories...');
@@ -550,7 +609,7 @@ async function main() {
             // A. Script
             console.log(` - Writing script for: ${topic}`);
             const script = await generateScript(
-                `Write a completely unique, highly engaging 60-second YouTube script about "${topic}" ` +
+                `Write a completely unique, highly engaging 60-second YouTube script about "${topic}" in ${language} ` +
                 `without formatting or director notes. Make it fresh and dynamic. (Seed: ${Math.random()}).`
             );
             const finalScript = `${String(script || '').trim()} ` +
@@ -576,7 +635,7 @@ async function main() {
             // C. Audio
             console.log(` - Generating Edge TTS audio...`);
             const audioPath = path.join(tempDir, `audio_${i}.mp3`);
-            await generateFreeAudio(finalScript, audioPath);
+            await generateFreeAudio(finalScript, audioPath, selectedVoice);
             const audioDuration   = await getAudioDuration(audioPath);
             const durationPerClip = audioDuration / NUM_CLIPS;
 

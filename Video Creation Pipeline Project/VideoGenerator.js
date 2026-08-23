@@ -244,11 +244,11 @@ async function setupDatabase() {
  * Tamil Voices:
  *   • "ta-IN-PallaviNeural" (Female) • "ta-IN-ValluvarNeural" (Male)
  */
-async function generateFreeAudio(text, outputFile) {
+async function generateFreeAudio(text, outputFile, selectedVoice) {
     // Escape double quotes for shell execution
     const safeText = text.replace(/"/g, '\\"');
 
-    const voice  = process.env.EDGE_TTS_VOICE  || 'en-US-AriaNeural';
+    const voice = selectedVoice || process.env.EDGE_TTS_VOICE || 'en-US-AriaNeural';
     const rate   = process.env.EDGE_TTS_RATE   || '-5%';   // slightly slower = more natural
     const pitch  = process.env.EDGE_TTS_PITCH  || '-2Hz';  // slightly deeper = less robotic
     const volume = process.env.EDGE_TTS_VOLUME || '+0%';
@@ -329,6 +329,35 @@ async function main() {
     // 1. Format Selection
     const vFormat = await rl.question("Choose format - [1] Shorts (9:16) [2] Wide (16:9): ");
     const resolution = vFormat === '1' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+    // Language & Voice
+    const langInput = await rl.question("\nEnter language (default: english): ");
+    const language = langInput.trim().toLowerCase() || 'english';
+    
+    const voiceInput = await rl.question("Enter voice gender - [M]ale / [F]emale (default: female): ");
+    const voiceGender = voiceInput.trim().toLowerCase().startsWith('m') ? 'male' : 'female';
+    
+    const VOICES = {
+        'english': { male: 'en-US-ChristopherNeural', female: 'en-US-AriaNeural' },
+        'spanish': { male: 'es-ES-AlvaroNeural', female: 'es-ES-ElviraNeural' },
+        'french': { male: 'fr-FR-HenriNeural', female: 'fr-FR-DeniseNeural' },
+        'german': { male: 'de-DE-ConradNeural', female: 'de-DE-KatjaNeural' },
+        'hindi': { male: 'hi-IN-MadhurNeural', female: 'hi-IN-SwaraNeural' },
+        'italian': { male: 'it-IT-DiegoNeural', female: 'it-IT-ElsaNeural' },
+        'portuguese': { male: 'pt-BR-AntonioNeural', female: 'pt-BR-FranciscaNeural' },
+        'japanese': { male: 'ja-JP-KeitaNeural', female: 'ja-JP-NanamiNeural' },
+        'korean': { male: 'ko-KR-InJoonNeural', female: 'ko-KR-SunHiNeural' },
+        'chinese': { male: 'zh-CN-YunxiNeural', female: 'zh-CN-XiaoxiaoNeural' },
+        'arabic': { male: 'ar-SA-HamedNeural', female: 'ar-SA-ZariyahNeural' },
+        'russian': { male: 'ru-RU-DmitryNeural', female: 'ru-RU-SvetlanaNeural' }
+    };
+
+    let selectedVoice = 'en-US-AriaNeural';
+    if (VOICES[language]) {
+        selectedVoice = VOICES[language][voiceGender];
+    } else {
+        console.log(`Language "${language}" not explicitly supported for TTS mapping, defaulting to English voice.`);
+    }
+
 
     // 2. Topic Selection
     console.log("\nBrainstorming fresh, trending video categories...");
@@ -455,7 +484,7 @@ async function main() {
             // B. Audio
             console.log(` - Generating Edge TTS audio...`);
             const audioPath = path.join(tempDir, `audio_${i}.mp3`);
-            await generateFreeAudio(finalScript, audioPath);
+            await generateFreeAudio(finalScript, audioPath, selectedVoice);
             
             const audioDuration = await getAudioDuration(audioPath);
             const durationPerImage = audioDuration / generatedKeywords.length;

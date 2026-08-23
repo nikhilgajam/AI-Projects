@@ -11,19 +11,42 @@ async function generateColabImage(prompt, outputFile, width, height) {
     const colabUrl = (process.env.COLAB_API_URL || '').replace(/\/$/, '');
     if (!colabUrl) throw new Error('COLAB_API_URL not set in .env');
 
-    // Scale to SDXL-Turbo's safe range while preserving aspect ratio.
-    // Longest side = 1024, shortest side snapped to nearest 64px (≥ 512).
-    const snap = (n) => Math.max(512, Math.round(n / 64) * 64);
+    // Aspect-ratio-aware scaling. SDXL-Turbo natively prefers ~512px. Generating at 1024px causes face deformation and cloned bodies.
     let w, h;
-    if (width >= height) {
-        w = 1024;
-        h = snap((height / width) * 1024);
-    } else {
-        h = 1024;
-        w = snap((width / height) * 1024);
-    }
+    if (width >= height) { w = 768; h = 512; }
+    else                 { h = 768; w = 512; }
 
     console.log(`   -> [Colab SDXL-Turbo] ${w}x${h} — "${prompt.slice(0, 70)}..."`);
+    
+    let enhancedPrompt = prompt;
+    const lowerPrompt = prompt.toLowerCase();
+    const baseStyle = "masterpiece, best quality, ultra-detailed, 8k uhd, cinematic lighting, photorealistic, sharp focus";
+    let humanFraming = "extreme close-up portrait headshot, 85mm lens, sharp focus on face, hyper-detailed beautiful realistic face, flawless symmetrical eyes, perfect facial proportions, clear distinct features, depth of field";
+    let textFraming = "close up shot, sharp focus on text, perfectly flat and clear, centered";
+    let defaultFraming = (width >= height) ? "wide horizontal landscape, centered composition" : "epic scenic shot, expansive environment, perfectly proportioned, centered composition";
+    
+    let finalNeg = "nsfw, nude, naked, exposed, bare chest, stretching, stretched, elongated, distorted proportions, bobblehead, giant head, disproportionate, double body, double hands, extra hands, missing hands, double heads, extra limbs, disconnected limbs, twin, cloned, duplicate, mutated, ugly, poorly drawn face, deformed face, asymmetric face, cross-eyed, badly drawn hands, multiple people, out of frame, bad anatomy, malformed joints, deformed animal";
+
+    let isPlural = lowerPrompt.includes('people') || lowerPrompt.includes('men') || lowerPrompt.includes('women') || lowerPrompt.includes('children') || lowerPrompt.includes('crowd') || lowerPrompt.includes('group') || lowerPrompt.includes('friends') || lowerPrompt.includes('couple');
+    let isSingular = lowerPrompt.includes('person') || lowerPrompt.includes('man') || lowerPrompt.includes('woman') || lowerPrompt.includes('boy') || lowerPrompt.includes('girl') || lowerPrompt.includes('human') || lowerPrompt.includes('god');
+
+    if (isPlural) {
+        enhancedPrompt = `${prompt}, multiple distinct people, fully clothed, modest attire, cinematic medium shot, clear distinct faces, highly detailed, perfect human anatomy, ${baseStyle}`;
+        finalNeg = finalNeg.replace(", multiple people", "");
+    } else if (isSingular) {
+        enhancedPrompt = `${prompt}, solo, 1boy/1girl, one distinct person, fully clothed, wearing detailed appropriate clothing, modest attire, ${humanFraming}, perfect human anatomy, stunningly beautiful realistic face, highly detailed face, flawless symmetrical features, ${baseStyle}`;
+    } else if (lowerPrompt.includes('animal') || lowerPrompt.includes('dog') || lowerPrompt.includes('cat') || lowerPrompt.includes('bird') || lowerPrompt.includes('wildlife') || lowerPrompt.includes('creature')) {
+        enhancedPrompt = `${prompt}, ${defaultFraming}, perfect animal anatomy, highly detailed fur and features, realistic, ${baseStyle}`;
+    } else {
+        enhancedPrompt = `${prompt}, ${defaultFraming}, ${baseStyle}`;
+    }
+
+    if (lowerPrompt.includes('text') || lowerPrompt.includes('sign') || lowerPrompt.includes('word') || lowerPrompt.includes('number') || lowerPrompt.includes('letter') || lowerPrompt.includes('writing')) {
+        enhancedPrompt += `, ${textFraming}, clear legible text, correct spelling, perfectly formed letters and numbers, sharp typography, meaningful text`;
+        finalNeg += ", gibberish, illegible, unreadable, bad spelling, scrambled letters, garbled text";
+    } else {
+        finalNeg += ", text, signature, watermark, letters, numbers, words, gibberish";
+    }
 
     const response = await fetch(`${colabUrl}/generate-image`, {
         method: 'POST',
@@ -31,7 +54,7 @@ async function generateColabImage(prompt, outputFile, width, height) {
             'Content-Type': 'application/json',
             'ngrok-skip-browser-warning': 'true',   // bypass ngrok's HTML interstitial
         },
-        body: JSON.stringify({ prompt, width: w, height: h, steps: 1, seed: -1 }),
+        body: JSON.stringify({ prompt: enhancedPrompt, negative_prompt: finalNeg, width: w, height: h, steps: 4, seed: -1 }),
         signal: AbortSignal.timeout(120_000),   // 2-minute timeout per image
     });
 
