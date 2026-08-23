@@ -128,8 +128,9 @@ def generate_image(req: ImageRequest):
         steps = req.steps
         kwargs = {}
         if req.negative_prompt:
-            cfg = 1.5
-            steps = max(3, req.steps)
+            # SDXL-Turbo burns images at CFG > 1.2. Lowering to 1.1 reduces AI blur.
+            cfg = 1.1
+            steps = max(4, req.steps)
             kwargs["negative_prompt"] = req.negative_prompt
 
         result = pipe(

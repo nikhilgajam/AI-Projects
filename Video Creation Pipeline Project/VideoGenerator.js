@@ -89,7 +89,13 @@ async function generateInternetImage(phrase, fallbackWord, outputFile, index, wi
         let imageUrl = null;
         let finalSource = '';
         // 1. Try Pollinations AI first (Turbo model)
-        const prompt = encodeURIComponent(phrase);
+        let enhancedPhrase = phrase;
+        if (phrase.toLowerCase().match(/(person|man|woman|boy|girl|human|god|people|men|women|children|crowd|group|friends|couple)/)) {
+            enhancedPhrase += ", highly detailed face, realistic, high quality";
+        } else {
+            enhancedPhrase += ", high quality, detailed, realistic";
+        }
+        const prompt = encodeURIComponent(enhancedPhrase);
         imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&model=turbo&nologo=true`;
         console.log(`   -> [Attempting] Pollinations AI: ${imageUrl}`);
         

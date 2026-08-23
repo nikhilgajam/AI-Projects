@@ -127,32 +127,27 @@ async function generateColabImage(prompt, outputFile, width, height) {
     let enhancedPrompt = prompt;
     const lowerPrompt = prompt.toLowerCase();
     
-    const baseStyle = "masterpiece, best quality, ultra-detailed, 8k uhd, cinematic lighting, photorealistic, sharp focus";
-    let humanFraming = "extreme close-up portrait headshot, 85mm lens, sharp focus on face, hyper-detailed beautiful realistic face, flawless symmetrical eyes, perfect facial proportions, clear distinct features, depth of field";
-    let textFraming = "close up shot, sharp focus on text, perfectly flat and clear, centered";
-    let defaultFraming = (width >= height) ? "wide horizontal landscape, centered composition" : "epic scenic shot, expansive environment, perfectly proportioned, centered composition";
+    // Simplified style for SDXL-Turbo (it degrades with too many tags)
+    const baseStyle = "high quality, detailed, realistic";
     
-    let finalNeg = "nsfw, nude, naked, exposed, bare chest, stretching, stretched, elongated, distorted proportions, bobblehead, giant head, disproportionate, double body, double hands, extra hands, missing hands, double heads, extra limbs, disconnected limbs, twin, cloned, duplicate, mutated, ugly, poorly drawn face, deformed face, asymmetric face, cross-eyed, badly drawn hands, multiple people, out of frame, bad anatomy, malformed joints, deformed animal";
-
-    let isPlural = lowerPrompt.includes('people') || lowerPrompt.includes('men') || lowerPrompt.includes('women') || lowerPrompt.includes('children') || lowerPrompt.includes('crowd') || lowerPrompt.includes('group') || lowerPrompt.includes('friends') || lowerPrompt.includes('couple');
-    let isSingular = lowerPrompt.includes('person') || lowerPrompt.includes('man') || lowerPrompt.includes('woman') || lowerPrompt.includes('boy') || lowerPrompt.includes('girl') || lowerPrompt.includes('human') || lowerPrompt.includes('god');
+    let isPlural = lowerPrompt.match(/(people|men|women|children|crowd|group|friends|couple)/);
+    let isSingular = lowerPrompt.match(/(person|man|woman|boy|girl|human|god)/);
 
     if (isPlural) {
-        enhancedPrompt = `${prompt}, multiple distinct people, fully clothed, modest attire, cinematic medium shot, clear distinct faces, highly detailed, perfect human anatomy, ${baseStyle}`;
-        finalNeg = finalNeg.replace(", multiple people", "");
+        enhancedPrompt = `${prompt}, ${baseStyle}`;
     } else if (isSingular) {
-        enhancedPrompt = `${prompt}, solo, 1boy/1girl, one distinct person, fully clothed, wearing detailed appropriate clothing, modest attire, ${humanFraming}, perfect human anatomy, stunningly beautiful realistic face, highly detailed face, flawless symmetrical features, ${baseStyle}`;
-    } else if (lowerPrompt.includes('animal') || lowerPrompt.includes('dog') || lowerPrompt.includes('cat') || lowerPrompt.includes('bird') || lowerPrompt.includes('wildlife') || lowerPrompt.includes('creature')) {
-        enhancedPrompt = `${prompt}, ${defaultFraming}, perfect animal anatomy, highly detailed fur and features, realistic, ${baseStyle}`;
+        enhancedPrompt = `${prompt}, highly detailed face, ${baseStyle}`;
     } else {
-        enhancedPrompt = `${prompt}, ${defaultFraming}, ${baseStyle}`;
+        enhancedPrompt = `${prompt}, ${baseStyle}`;
     }
 
-    if (lowerPrompt.includes('text') || lowerPrompt.includes('sign') || lowerPrompt.includes('word') || lowerPrompt.includes('number') || lowerPrompt.includes('letter') || lowerPrompt.includes('writing')) {
-        enhancedPrompt += `, ${textFraming}, clear legible text, correct spelling, perfectly formed letters and numbers, sharp typography, meaningful text`;
-        finalNeg += ", gibberish, illegible, unreadable, bad spelling, scrambled letters, garbled text";
+    // Keep negative prompt short to avoid burning the image at CFG 1.5
+    let finalNeg = "nsfw, nude, deformed, ugly, blurry, bad anatomy, bad proportions, watermark";
+
+    if (lowerPrompt.match(/(text|sign|word|number|letter|writing)/)) {
+        enhancedPrompt += `, clear legible text`;
     } else {
-        finalNeg += ", text, signature, watermark, letters, numbers, words, gibberish";
+        finalNeg += ", text, watermark, signature";
     }
 
     const res = await fetch(`${colabUrl}/generate-image`, {
