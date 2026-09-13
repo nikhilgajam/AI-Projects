@@ -17,7 +17,31 @@ function getAudioDuration(filePath) {
     });
 }
 
-export async function generateAudioForSlides(slides, outputDir, voice = "en-US-ChristopherNeural") {
+/**
+ * Ensures a percent string (rate/volume) always has a leading + or - sign.
+ * edge-tts strictly requires format: ^[+-]\d+%$
+ * e.g.  "0%"  → "+0%"   "-5%" → "-5%"   "+10%" → "+10%"
+ */
+function normalizePercent(value, fallback) {
+    const str = (value || fallback || "+0%").trim();
+    // Already has sign
+    if (/^[+-]/.test(str)) return str;
+    // Missing sign — prepend +
+    return `+${str}`;
+}
+
+/**
+ * Ensures a Hz string (pitch) always has a leading + or - sign.
+ * edge-tts strictly requires format: ^[+-]\d+Hz$
+ * e.g.  "2Hz"  → "+2Hz"   "-2Hz" → "-2Hz"
+ */
+function normalizeHz(value, fallback) {
+    const str = (value || fallback || "+0Hz").trim();
+    if (/^[+-]/.test(str)) return str;
+    return `+${str}`;
+}
+
+export async function generateAudioForSlides(slides, outputDir, voice = "en-US-AriaNeural") {
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
@@ -25,20 +49,24 @@ export async function generateAudioForSlides(slides, outputDir, voice = "en-US-C
     console.log("🎙️ Generating voiceovers for slides using edge-tts...");
     const updatedSlides = [];
 
+    // Resolve and normalize all prosody settings once (outside the loop)
+    const envVoice  = process.env.EDGE_TTS_VOICE  || voice;
+    const rate      = normalizePercent(process.env.EDGE_TTS_RATE,   "-5%");
+    const pitch     = normalizeHz(process.env.EDGE_TTS_PITCH,       "-2Hz");
+    const volume    = normalizePercent(process.env.EDGE_TTS_VOLUME,  "+0%");
+
+    console.log(`   Voice: ${envVoice} | Rate: ${rate} | Pitch: ${pitch} | Volume: ${volume}`);
+
     for (const slide of slides) {
         const audioFileName = `slide_${slide.slide_number}.mp3`;
         const audioFilePath = path.join(outputDir, audioFileName);
-        
-        // Escape quotes for command line
+
+        // Escape double-quotes inside narration text for the shell command
         const safeText = slide.narration_script.replace(/"/g, '\\"');
-        const envVoice = process.env.EDGE_TTS_VOICE || voice;
-        const rate = process.env.EDGE_TTS_RATE || "+0%";
-        const pitch = process.env.EDGE_TTS_PITCH || "+0Hz";
-        const volume = process.env.EDGE_TTS_VOLUME || "+0%";
         const command = `edge-tts --voice "${envVoice}" --rate="${rate}" --pitch="${pitch}" --volume="${volume}" --text "${safeText}" --write-media "${audioFilePath}"`;
-        
+
         try {
-            execSync(command, { stdio: 'pipe' });
+            execSync(command, { stdio: "pipe" });
             const duration = await getAudioDuration(audioFilePath);
             updatedSlides.push({
                 ...slide,

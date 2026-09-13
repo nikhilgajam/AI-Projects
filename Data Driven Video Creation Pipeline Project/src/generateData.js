@@ -11,7 +11,7 @@ export async function generateVideoData(topic, duration) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-        model: "gemini-3.1-flash-lite-preview",
+        model: process.env.GOOGLE_GENAI_MODEL || "gemini-3.1-flash-lite-preview",
         generationConfig: {
             responseMimeType: "application/json"
         }
@@ -44,6 +44,7 @@ export async function generateVideoData(topic, duration) {
         "slides": [
             {
                 "slide_number": 1,
+                "slide_type": "default",
                 "heading": "Catchy Heading for the slide",
                 "bullet_points": ["Short point 1", "Short point 2", "Short point 3"],
                 "narration_script": "The exact script the voiceover artist will read for this slide.",
@@ -52,15 +53,42 @@ export async function generateVideoData(topic, duration) {
             }
         ]
     }
-    
-    CRITICAL VISUAL-AUDIO ALIGNMENT:
-    To keep the video interesting, the "bullet_points" MUST visually highlight the exact key names, statistics, and core data that the "narration_script" is talking about. The audio should elaborate on the bullet points, but if a specific name or data point is spoken, it MUST appear in the bullet points on screen.
 
-    ${numSlidesInstruction} Provide 2 to 3 clipart keywords and emojis per slide.
+    SLIDE TYPES — choose the best visual for each slide's content:
+
+    1. "default" — standard heading + bullet points + clipart. Use this for most slides.
+
+    2. "table" — when comparing items, showing structured data, or listing specs side-by-side.
+       Add these fields (alongside heading and narration_script):
+       "table_headers": ["Column A", "Column B", "Column C"],
+       "table_rows": [["Row1Val1", "Row1Val2", "Row1Val3"], ["Row2Val1", "Row2Val2", "Row2Val3"]]
+
+    3. "chart" — when showing trends, growth, rankings, or numeric comparisons over time or categories.
+       Add these fields (alongside heading and narration_script):
+       "chart_type": "bar" | "line" | "pie",
+       "chart_labels": ["Label1", "Label2", "Label3"],
+       "chart_datasets": [
+           { "label": "Series Name", "data": [10, 20, 30] }
+       ]
+
+    4. "image" — when a real-world image, diagram, or AI-generated visual best illustrates the concept.
+       Add these fields (alongside heading, narration_script, and bullet_points):
+       "image_prompt": "A detailed description for an AI image generator, e.g. 'a futuristic city skyline at night with neon lights'"
+
+    RULES:
+    - ONLY use "table", "chart", or "image" when the content strongly calls for it (e.g., numeric data → chart, comparison → table). Otherwise use "default".
+    - For "table" and "chart" slides, you may omit bullet_points and clipart fields.
+    - For "image" slides, keep bullet_points (shown below the image) and clipart fields.
+    - Always include slide_type on every slide.
+
+    CRITICAL VISUAL-AUDIO ALIGNMENT:
+    The "bullet_points" MUST visually highlight the exact key names, statistics, and core data spoken in the "narration_script". If a specific name or data point is spoken, it MUST appear on screen.
+
+    ${numSlidesInstruction} For default slides, provide 2 to 3 clipart keywords and emojis.
     
     ${durationInstruction}
     
-    IMPORTANT LAST SLIDE: The very last slide MUST be about the YouTube channel "${channelName}". It MUST include a strong call to action asking the viewers to LIKE, SHARE, and SUBSCRIBE to the channel. The narration for this specific last slide MUST be approximately 30 seconds long (around 75 words).
+    IMPORTANT LAST SLIDE: The very last slide MUST be about the YouTube channel "${channelName}". It MUST include a strong call to action asking viewers to LIKE, SHARE, and SUBSCRIBE. The narration for this slide MUST be approximately 30 seconds long (around 75 words). Use slide_type "default" for this slide.
     `;
 
     console.log("🧠 Brainstorming and generating script via Gemini...");

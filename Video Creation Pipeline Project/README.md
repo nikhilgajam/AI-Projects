@@ -1,4 +1,4 @@
-# 🚀 Automated YouTube Video Generator
+# 🚀 Video Creation Pipeline
 
 An intelligent, fully automated Node.js application that runs an end-to-end video production pipeline. From brainstorming topics to final `.mp4` assembly, it leverages Google Gemini AI, Edge-TTS, and various image/video generation backends to create stunning, faceless YouTube Shorts and Wide videos—100% free and locally processed.
 
