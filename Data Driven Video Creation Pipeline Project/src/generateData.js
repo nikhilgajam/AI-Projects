@@ -1,9 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 
 dotenv.config();
 
-export async function generateVideoData(topic, duration) {
+export async function generateVideoData(topic, duration, tmpDir) {
     const apiKey = process.env.GOOGLE_GENAI_API_KEY;
     if (!apiKey) {
         throw new Error("GOOGLE_GENAI_API_KEY is not set in .env");
@@ -33,14 +35,15 @@ export async function generateVideoData(topic, duration) {
     const channelName = process.env.YOUTUBE_CHANNEL_NAME || "Our Channel";
 
     const prompt = `
-    You are a professional YouTube video script writer and presentation expert.
+    You are a professional YouTube video script writer, SEO expert, and presentation expert.
     Create a highly engaging, data-driven presentation script on the topic: "${topic}".
+    Your goal is to maximize click-through rate (CTR) and audience retention for a large audience.
     
     Output MUST be valid JSON with the following structure:
     {
-        "youtube_title": "A highly clickable, SEO-optimized title",
-        "youtube_description": "An engaging, SEO-optimized description with hashtags",
-        "tags": ["tag1", "tag2", "tag3"],
+        "youtube_title": "A highly clickable, SEO-optimized title (use emotional trigger words, include keywords early)",
+        "youtube_description": "An engaging, SEO-optimized description. Include a compelling hook in the first 2 lines, detailed body, call to actions, and hashtags.",
+        "tags": ["high_volume_keyword1", "long_tail_keyword2", "niche_keyword3"],
         "slides": [
             {
                 "slide_number": 1,
@@ -53,6 +56,11 @@ export async function generateVideoData(topic, duration) {
             }
         ]
     }
+
+    TITLE, DESCRIPTION, AND TAG RULES:
+    - TITLE: Must be highly clickable, ideally under 60 characters, use emotional trigger words (e.g., "Secret", "Genius", "Shocking", "Ultimate", "Why"), and place main keywords at the beginning. Avoid misleading clickbait, but make it irresistible to click.
+    - DESCRIPTION: The first 1-2 sentences must be a strong hook since this shows up in YouTube search results. Include a detailed summary of the video content, relevant keywords naturally integrated, and 3-5 highly relevant hashtags at the bottom.
+    - TAGS: Provide 15-20 highly relevant tags, mixing broad, high-volume keywords with specific, long-tail phrases to maximize search visibility.
 
     SLIDE TYPES — choose the best visual for each slide's content:
 
@@ -95,12 +103,22 @@ export async function generateVideoData(topic, duration) {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    
+    if (tmpDir && fs.existsSync(tmpDir)) {
+        fs.writeFileSync(path.join(tmpDir, "llm_prompt.txt"), prompt);
+        fs.writeFileSync(path.join(tmpDir, "llm_output_raw.txt"), text);
+    }
+    
     let jsonText = text.trim();
     // Remove markdown formatting if present
     jsonText = jsonText.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '').trim();
 
     try {
-        return JSON.parse(jsonText);
+        const parsed = JSON.parse(jsonText);
+        if (tmpDir && fs.existsSync(tmpDir)) {
+            fs.writeFileSync(path.join(tmpDir, "llm_output_parsed.json"), JSON.stringify(parsed, null, 2));
+        }
+        return parsed;
     } catch (e) {
         // Fallback: robustly extract the first top-level JSON object
         const startIdx = jsonText.indexOf('{');
@@ -139,7 +157,11 @@ export async function generateVideoData(topic, duration) {
 
             if (endIdx !== -1) {
                 const extracted = jsonText.substring(startIdx, endIdx + 1);
-                return JSON.parse(extracted);
+                const parsed = JSON.parse(extracted);
+                if (tmpDir && fs.existsSync(tmpDir)) {
+                    fs.writeFileSync(path.join(tmpDir, "llm_output_parsed.json"), JSON.stringify(parsed, null, 2));
+                }
+                return parsed;
             }
         }
         console.error("Failed to parse Gemini response as JSON:");

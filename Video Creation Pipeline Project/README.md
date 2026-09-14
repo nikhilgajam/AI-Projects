@@ -101,18 +101,47 @@ To use regional voices (like Hindi, Tamil, Telugu), open `VideoGenerator.js`, lo
 
 *(Tip: To see all available global voices, run `edge-tts --list-voices` in your terminal).*
 
-## Thumbnail creation Prompts:
+## 💡 Prompts
+
+Here are some optimized ChatGPT/Gemini prompts you can use to brainstorm high-performing topics and generate assets for this pipeline:
+
+### Video Ideas: Topic Idea Generation (Broad Audience & SEO)
+Use this prompt to generate highly searchable, mass-market video concepts:
 
 ```text
-You're a professional youtube short thumbnail creator
+Act as a YouTube strategist and SEO expert. I want to create faceless YouTube Shorts and Wide videos explaining fascinating topics simply. Generate a list of 10 highly searchable, educational video topics designed for a broad, mass-market audience.
 
-Create a HD Youtube Short optimized thumbnail using with the title and right image
-And the text shouldn't be at the extreme top and extreme bottom so that users can view
+For each idea, provide:
+1. A catchy, high-CTR YouTube title
+2. Primary and secondary SEO keywords
+3. A brief 1-2 sentence outline of the video's hook and core message
+4. Why this topic appeals to a mass audience
 ```
 
+### Video Ideas: Trend Jacking (Current Events / Tech News)
+Use this prompt to generate timely video ideas based on current trends, news, or emerging technologies:
+
 ```text
-You're a professional youtube thumbnail creator
-Create a Youtube Wide Full Screen Thumbnail Optimized for larger audience
+Act as a trend analyst and YouTube strategist. I need to create a rapid-response, faceless YouTube video explaining a major current event or recent tech breakthrough. Generate 5 timely video ideas based on recent trends.
+
+For each idea, provide:
+1. A high-urgency, click-worthy YouTube title
+2. The core trend or news being addressed
+3. Key visual concepts to generate for the video
+4. Why this topic is relevant right now
+```
+
+### Asset Generation: Thumbnail Creation
+Use these enhanced prompts in AI image generators (like Midjourney, DALL-E 3, or Gemini) to create high-converting thumbnails:
+
+**For YouTube Shorts (9:16):**
+```text
+Act as an expert YouTube thumbnail designer. Create a highly engaging, vertical (9:16) background image for a YouTube Short about [Insert Topic]. The visual should be striking, colorful, and instantly capture attention within the first second. Ensure the top 15% and bottom 20% of the image are relatively clean and uncluttered, leaving safe zones for the platform's native UI overlay.
+```
+
+**For YouTube Wide / Standard Videos (16:9):**
+```text
+Act as an expert YouTube thumbnail designer. Create a cinematic, high-contrast, wide (16:9) thumbnail background for a video about [Insert Topic]. The composition should follow the rule of thirds, with a clear, exaggerated focal point that creates intense curiosity. Leave negative space on the left or right side for bold text placement.
 ```
 
 ## 🛑 License

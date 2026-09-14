@@ -161,3 +161,53 @@ Temporary assets (frames, audio clips, clipart) are stored in `tmp/<timestamp>/`
 | `ffmpeg-static` | Bundled FFmpeg binary |
 | `ffprobe-static` | Bundled ffprobe binary for audio duration detection |
 | `edge-tts` *(Python)* | Neural TTS voiceover generation |
+
+---
+
+## 💡 Prompts
+
+Here are some optimized ChatGPT/Gemini prompts you can use to brainstorm high-performing topics for this pipeline:
+
+### Topic Idea Generation (Broad Audience & SEO)
+Use this prompt to generate highly searchable, presentation-ready video concepts:
+
+```text
+Act as a YouTube strategist and SEO expert. I want to create educational YouTube videos where I explain complex topics simply using a presentation (PPT). Generate a list of 10 highly searchable, educational video topics designed for a broad, mass-market audience. 
+
+These topics must be highly visual and easy to break down into slide formats (bullet points, charts, comparisons, or steps). 
+
+For each idea, please provide:
+1. A catchy, high-CTR YouTube title
+2. Primary and secondary SEO keywords
+3. A brief 1-2 sentence outline of how the presentation would be structured
+4. Why this topic appeals to a mass audience
+
+Just give me the ideas, do not generate the actual script or PPT content yet.
+```
+
+### Niche Deep-Dive (Data-Heavy Topics)
+Use this prompt to generate detailed, data-centric video concepts tailored for specific niches:
+
+```text
+Act as a niche content strategist. I want to create an educational YouTube video that does a deep dive into a data-heavy or highly technical topic using a presentation. Generate a list of 5 specialized video topics that require charts, graphs, and structured data tables to explain effectively.
+
+For each idea, provide:
+1. A compelling YouTube title
+2. Target audience (who this is for)
+3. Key data points or charts that should be featured
+4. A brief 1-2 sentence outline
+```
+
+### Trend Jacking (Current Events / Tech News)
+Use this prompt to generate timely video ideas based on current trends, news, or emerging technologies:
+
+```text
+Act as a trend analyst and YouTube strategist. I need to create a rapid-response, presentation-style YouTube video explaining a major current event or recent tech breakthrough. Generate 5 timely video ideas based on recent trends.
+
+For each idea, provide:
+1. A high-urgency, click-worthy YouTube title
+2. The core trend or news being addressed
+3. A breakdown of how to structure the slide content (e.g., timeline, pros/cons, comparison)
+4. Why this topic is relevant right now
+```
+

@@ -54,7 +54,7 @@ async function main() {
 
     try {
         // Step 1: Brainstorm Script & SEO Data
-        const videoData = await generateVideoData(topic, duration.trim());
+        const videoData = await generateVideoData(topic, duration.trim(), tmpDir);
         console.log("✅ Script generated successfully!");
         
         // Save Metadata
