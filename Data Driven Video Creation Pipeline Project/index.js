@@ -50,7 +50,7 @@ async function main() {
     }
 
     // Sanitize topic for filenames
-    const safeTopic = topic.replace(/[^a-z0-9]/gi, '_');
+    const safeTopic = topic.replace(/[^a-z0-9]/gi, '_').substring(0, 50).replace(/_+$/, '');
 
     try {
         // Step 1: Brainstorm Script & SEO Data
