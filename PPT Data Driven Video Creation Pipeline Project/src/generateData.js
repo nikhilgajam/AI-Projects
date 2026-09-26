@@ -13,7 +13,7 @@ export async function generateVideoData(topic, duration, tmpDir) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-        model: process.env.GOOGLE_GENAI_MODEL || "gemini-3.1-flash-lite-preview",
+        model: process.env.GOOGLE_GENAI_MODEL || "gemini-3.1-flash-lite",
         generationConfig: {
             responseMimeType: "application/json"
         }

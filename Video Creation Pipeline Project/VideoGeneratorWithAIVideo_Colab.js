@@ -414,7 +414,7 @@ Do NOT include any text, titles, or words in the image description — just the 
 // ── Gemini & SQLite (reused) ──────────────────────────────────────────────────
 
 const ai        = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
-const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite-preview';
+const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite';
 
 async function generateScript(prompt) {
     const res = await ai.models.generateContent({

@@ -333,7 +333,7 @@ async function getTopicImageSet(topic, keywordPairs, width, height, tempDir) {
 
 // Initialize Gemini SDK per your requirements
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
-const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite-preview';
+const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite';
 
 /**
  * 1. AI Generation Module (Gemini)

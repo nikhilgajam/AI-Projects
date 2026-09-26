@@ -57,7 +57,7 @@ GOOGLE_GENAI_API_KEY="your_gemini_api_key_here"
 COLAB_API_URL="https://your-ngrok-url-here.ngrok-free.app"
 
 # Optional: Specific Gemini model to use
-# GOOGLE_GENAI_MODEL="gemini-3.1-flash-lite-preview"
+# GOOGLE_GENAI_MODEL="gemini-3.1-flash-lite"
 ```
 
 ### 4. Font Setup

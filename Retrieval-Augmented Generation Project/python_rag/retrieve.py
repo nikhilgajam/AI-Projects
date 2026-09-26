@@ -9,7 +9,7 @@ load_dotenv()
 
 # Initialize Gemini SDK per your requirements
 client = genai.Client(api_key=os.environ.get("GOOGLE_GENAI_API_KEY"))
-model_name = os.environ.get("GOOGLE_GENAI_MODEL", "gemini-3.1-flash-lite-preview")
+model_name = os.environ.get("GOOGLE_GENAI_MODEL", "gemini-3.1-flash-lite")
 
 def get_embedding(text: str) -> list[float]:
     """

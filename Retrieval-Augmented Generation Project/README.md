@@ -38,7 +38,7 @@ When a user asks a question, the pipeline springs into action:
 2. **Vector Search:** The system compares the query vector against all the document vectors in the database. It calculates the mathematical distance between them (often using **Cosine Similarity**). Vectors that are close together mathematically share similar semantic meaning.
 3. **Context Retrieval:** The top *K* most similar documents are retrieved from the database.
 4. **Augmenting the Prompt:** The system constructs a new prompt that combines the original question with the text of the retrieved documents (the context).
-5. **Generation:** This augmented prompt is sent to the LLM (like `gemini-3.1-flash-lite-preview`). The LLM reads the context, grounds its reasoning in the provided facts, and generates a highly accurate answer.
+5. **Generation:** This augmented prompt is sent to the LLM (like `gemini-3.1-flash-lite`). The LLM reads the context, grounds its reasoning in the provided facts, and generates a highly accurate answer.
 
 ---
 

@@ -69,8 +69,8 @@ Create a `.env` file in the project root. All options are shown below:
 GOOGLE_GENAI_API_KEY=your_api_key_here
 
 # Gemini model to use for script generation
-# Default: gemini-3.1-flash-lite-preview
-GOOGLE_GENAI_MODEL=gemini-3.1-flash-lite-preview
+# Default: gemini-3.1-flash-lite
+GOOGLE_GENAI_MODEL=gemini-3.1-flash-lite
 
 # ----------------------------------------------------------
 # YouTube / Channel Settings

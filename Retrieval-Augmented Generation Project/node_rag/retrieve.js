@@ -4,7 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 
 // Initialize Gemini SDK per your requirements
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
-const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite-preview';
+const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite';
 const embeddingModelName = 'text-embedding-004';
 
 /**

@@ -2,7 +2,7 @@ const { GoogleGenAI } = require("@google/genai");
 require("dotenv").config();
 
 const ai        = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
-const modelName = process.env.GOOGLE_GENAI_MODEL || "gemini-3.1-flash-lite-preview";
+const modelName = process.env.GOOGLE_GENAI_MODEL || "gemini-3.1-flash-lite";
 
 const DEVOTIONAL_PROMPT_TEMPLATE = `
 You are an expert scholar of ancient Hindu scriptures, Sanskrit Stotrams, Telugu Keerthanalu, and Hindi Bhajans.
