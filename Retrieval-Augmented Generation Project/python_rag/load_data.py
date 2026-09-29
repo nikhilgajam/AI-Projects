@@ -16,7 +16,7 @@ def get_embedding(text: str) -> list[float]:
     Generate an embedding vector for the given text using the Gemini embedding model.
     """
     response = client.models.embed_content(
-        model="text-embedding-004",
+        model="gemini-embedding-2",
         contents=text
     )
     return response.embeddings[0].values

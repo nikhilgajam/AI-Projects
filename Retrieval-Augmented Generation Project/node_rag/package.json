@@ -8,7 +8,8 @@
     "retrieve": "node retrieve.js"
   },
   "dependencies": {
-    "@google/genai": "^0.1.2",
+    "@google/genai": "^2.24.0",
+    "@google/generative-ai": "^0.24.1",
     "dotenv": "^16.4.5",
     "pdf-parse": "^1.1.1",
     "sqlite3": "^5.1.7"

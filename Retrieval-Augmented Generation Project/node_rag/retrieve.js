@@ -5,7 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 // Initialize Gemini SDK per your requirements
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
 const modelName = process.env.GOOGLE_GENAI_MODEL || 'gemini-3.1-flash-lite';
-const embeddingModelName = 'text-embedding-004';
+const embeddingModelName = 'gemini-embedding-2';
 
 /**
  * 1. AI Generation Module (Gemini)
@@ -44,16 +44,11 @@ async function getEmbedding(text) {
  * @returns {number}
  */
 function cosineSimilarity(vecA, vecB) {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
-    }
+    const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+    const normA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+    const normB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
     if (normA === 0 || normB === 0) return 0;
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    return dotProduct / (normA * normB);
 }
 
 /**

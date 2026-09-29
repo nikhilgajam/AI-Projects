@@ -7,7 +7,7 @@ const pdf = require('pdf-parse');
 
 // Initialize Gemini SDK per your requirements
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
-const embeddingModelName = 'text-embedding-004';
+const embeddingModelName = 'gemini-embedding-2';
 
 async function getEmbedding(text) {
     const response = await ai.models.embedContent({
