@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "joke-server-node": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\ADMIN\\Documents\\AI-Projects\\MCP Project\\node\\index.js"
+      ]
+    },
+    "joke-server-python": {
+      "command": "python",
+      "args": [
+        "C:\\Users\\ADMIN\\Documents\\AI-Projects\\MCP Project\\python\\server.py"
+      ]
+    }
+  }
+}
