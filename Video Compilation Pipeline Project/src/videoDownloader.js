@@ -124,9 +124,14 @@ function getBestVideoFile(video) {
     // Sort by width descending
     mp4Files.sort((a, b) => b.width - a.width);
 
-    // Prefer files with width >= 1280
-    const hdFiles = mp4Files.filter(f => f.width >= 1280);
-    
+    // Prefer files with width >= 2560 (1440p native)
+    const qhdFiles = mp4Files.filter(f => f.width >= 2560);
+    if (qhdFiles.length > 0) {
+        return qhdFiles[0];
+    }
+
+    // Fallback to files with width >= 1920 (1080p, will be upscaled)
+    const hdFiles = mp4Files.filter(f => f.width >= 1920);
     if (hdFiles.length > 0) {
         return hdFiles[0];
     }

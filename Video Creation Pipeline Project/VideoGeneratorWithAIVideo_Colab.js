@@ -509,8 +509,8 @@ async function main() {
     // 1. Format
     const vFormat   = await rl.question('\nChoose format - [1] Shorts (9:16) [2] Wide (16:9): ');
     const resolution = vFormat === '1'
-        ? { width: 1080, height: 1920 }
-        : { width: 1920, height: 1080 };
+        ? { width: 1440, height: 2560 }
+        : { width: 2560, height: 1440 };
     const formatLabel = vFormat === '1' ? 'Short' : 'Regular';
     // Language & Voice
     const langInput = await rl.question("\nEnter language (default: english): ");

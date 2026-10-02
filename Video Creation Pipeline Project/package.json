@@ -1,13 +1,22 @@
 {
-  "name": "z",
+  "name": "video-creation-pipeline",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI-powered video creation pipeline using Google Gemini, Edge-TTS, and FFmpeg",
   "main": "VideoGenerator.js",
   "scripts": {
+    "start": "node VideoGenerator.js",
+    "custom": "node CustomVideoGenerator.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "video-generation",
+    "ai",
+    "gemini",
+    "youtube",
+    "edge-tts",
+    "ffmpeg"
+  ],
+  "author": "Nikhil Gajam",
   "license": "ISC",
   "type": "module",
   "dependencies": {

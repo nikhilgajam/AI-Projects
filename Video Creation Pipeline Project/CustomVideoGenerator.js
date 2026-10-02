@@ -478,7 +478,7 @@ async function main() {
 
     // 1. Format Selection
     const vFormat = await rl.question("\nChoose format - [1] Shorts (9:16) [2] Regular/Wide (16:9): ");
-    const resolution = vFormat === '1' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+    const resolution = vFormat === '1' ? { width: 1440, height: 2560 } : { width: 2560, height: 1440 };
     const formatLabel = vFormat === '1' ? 'Short' : 'Regular';
     // Language & Voice
     const langInput = await rl.question("\nEnter language (default: english): ");
@@ -488,7 +488,7 @@ async function main() {
     const voiceGender = voiceInput.trim().toLowerCase().startsWith('m') ? 'male' : 'female';
     
     const VOICES = {
-        'english': { male: 'en-US-DavisNeural', female: 'en-US-AriaNeural' },
+        'english': { male: 'en-US-DavisNeural', female: 'en-US-EmmaMultilingualNeural' },
         'hindi': { male: 'hi-IN-MadhurNeural', female: 'hi-IN-SwaraNeural' },
         'telugu': { male: 'te-IN-MohanNeural', female: 'te-IN-ShrutiNeural' },
         'tamil': { male: 'ta-IN-ValluvarNeural', female: 'ta-IN-PallaviNeural' }

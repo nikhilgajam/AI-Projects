@@ -86,11 +86,11 @@ async function main() {
         let height = 1024;
         
         if (formatChoice === '2') {
-            width = 1920;
-            height = 1080;
+            width = 2560;
+            height = 1440;
         } else if (formatChoice === '3') {
-            width = 1080;
-            height = 1920;
+            width = 1440;
+            height = 2560;
         }
 
         // 3. Output Filename

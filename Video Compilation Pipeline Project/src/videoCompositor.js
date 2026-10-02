@@ -23,7 +23,7 @@ function getMediaDuration(filePath) {
 
 /**
  * Creates one segment's clip:
- *   - Stock video scaled to 1920x1080
+ *   - Stock video scaled to 2560x1440
  *   - Looped if shorter than narration
  *   - Trimmed to match narration duration
  *   - Smooth fade-in at start, fade-out at end
@@ -89,7 +89,7 @@ async function createSegmentClip(segment, tmpDir, fps, index, totalSegments) {
             }
         } else {
             console.log(`      ⚠️ No stock video for Segment ${index + 1}, using gradient background`);
-            command.input(`color=c=#0a0a0a:s=1920x1080:d=${duration}`).inputFormat('lavfi');
+            command.input(`color=c=#0a0a0a:s=2560x1440:d=${duration}`).inputFormat('lavfi');
             videoStreamLabel = '[0:v]';
             audioInputIndex = 1;
         }
@@ -103,8 +103,8 @@ async function createSegmentClip(segment, tmpDir, fps, index, totalSegments) {
 
         // Visual processing chain
         filterChains.push(
-            `${videoStreamLabel}scale=1920:1080:force_original_aspect_ratio=decrease[scaled]`,
-            `[scaled]pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black[padded]`,
+            `${videoStreamLabel}scale=2560:1440:force_original_aspect_ratio=decrease[scaled]`,
+            `[scaled]pad=2560:1440:(ow-iw)/2:(oh-ih)/2:color=black[padded]`,
             `[padded]eq=contrast=1.05:saturation=1.1[graded]`,
             `[graded]fps=${fps}[fpsed]`,
             `[fpsed]setpts=PTS-STARTPTS[ptsed]`,
