@@ -61,12 +61,29 @@ export async function createWebVideo(slides, tmpDir, finalVideoPath) {
         // 1440p output by scaling 1920x1080
         await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2560/1920 });
         await page.setContent(html, { waitUntil: "load" });
-
         // WAIT FOR FONTS TO FULLY LOAD to prevent invisible text (FOIT)!
         await page.evaluate(async () => {
             await document.fonts.ready;
+            await Promise.all(Array.from(document.images).filter(img => !img.complete).map(img => new Promise(resolve => { img.onload = img.onerror = resolve; })));
+            
+            // Wait for Mermaid to render if there's a mermaid block
+            const mermaidBlocks = document.querySelectorAll('.mermaid');
+            if (mermaidBlocks.length > 0) {
+                 await new Promise(resolve => {
+                     const check = () => {
+                         let allRendered = true;
+                         mermaidBlocks.forEach(b => {
+                             if (!b.querySelector('svg')) allRendered = false;
+                         });
+                         if (allRendered) resolve();
+                         else setTimeout(check, 100);
+                     };
+                     check();
+                 });
+            }
+
             // Also add a tiny buffer just in case
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 500));
             // CRITICAL: Force the browser to calculate styles and initialize CSS animations!
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         });

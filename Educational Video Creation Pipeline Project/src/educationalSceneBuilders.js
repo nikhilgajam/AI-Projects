@@ -5,6 +5,12 @@ function escHtml(str) {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function escMermaid(str) {
+    if (!str) return "";
+    // Only escape < and > to prevent HTML injection, leave quotes alone for Mermaid syntax
+    return String(str).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function getBaseCSS(accent) {
     return `
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -49,7 +55,58 @@ function getBaseCSS(accent) {
 }
 
 function wrapHTML(body, css) {
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=STIX+Two+Math&display=swap" rel="stylesheet"><style>${css}</style></head><body>${body}</body></html>`;
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    <style>
+        ${css}
+        .mermaid { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; overflow: visible; }
+        .mermaid svg { width: 100% !important; height: auto !important; max-width: 100% !important; max-height: 100% !important; }
+        /* Mermaid: Lines and Arrows */
+        .mermaid svg .edgePath path, .mermaid svg .flowchart-link { stroke: #ffffff !important; stroke-width: 4px !important; fill: none !important; }
+        .mermaid svg marker path, .mermaid svg .arrowheadPath { fill: #ffffff !important; stroke: none !important; }
+        
+        /* Mermaid Global Text Rules (Critical for accurate bounding box calculation) */
+        .label, text, span { font-family: 'Inter', -apple-system, sans-serif !important; }
+        .node .label, .cluster-label .label, .cluster .label { font-weight: 700 !important; }
+        .edgeLabel .label { font-weight: 600 !important; }
+        .mermaid svg foreignObject { overflow: visible !important; }
+        
+        /* Mermaid: Edge Labels (Text on arrows) */
+        .mermaid svg .edgeLabel, .mermaid svg .edgeLabel .label, .mermaid svg .edgeLabel rect, .mermaid svg .edge-thickness-normal { background-color: transparent !important; background: transparent !important; fill: transparent !important; }
+        .mermaid svg .edgeLabel text, .mermaid svg .edgeLabel span, .mermaid svg .edgeLabel .label { fill: #ffffff !important; color: #ffffff !important; background: transparent !important; }
+        
+        /* Mermaid: Nodes (Main boxes) */
+        .mermaid svg .node rect, .mermaid svg .node circle, .mermaid svg .node polygon, .mermaid svg .node path { fill: #ffffff !important; stroke: #ffffff !important; stroke-width: 2px !important; }
+        .mermaid svg .node text, .mermaid svg .node .label, .mermaid svg .node span { fill: #0f172a !important; color: #0f172a !important; background: transparent !important; }
+        
+        /* Mermaid: Subgraphs (Clusters / Outer boxes) */
+        .mermaid svg .cluster rect { fill: rgba(255,255,255,0.05) !important; stroke: rgba(255,255,255,0.4) !important; stroke-width: 2px !important; rx: 15px !important; ry: 15px !important; }
+        .mermaid svg .cluster .label, .mermaid svg .cluster text, .mermaid svg .cluster span, .mermaid svg .cluster-label span, .mermaid svg .cluster-label text { color: #ffffff !important; fill: #ffffff !important; background: transparent !important; }
+    </style></head><body>${body}
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      document.fonts.ready.then(() => {
+          mermaid.initialize({ 
+              startOnLoad: false, 
+              theme: 'dark', 
+              themeVariables: { 
+                  fontFamily: 'Inter', 
+                  fontSize: '36px',
+                  lineColor: '#ffffff',
+                  primaryTextColor: '#ffffff',
+                  nodeBorder: '#ffffff',
+                  clusterBkg: 'rgba(255,255,255,0.05)',
+                  clusterBorder: 'rgba(255,255,255,0.4)',
+                  edgeLabelBackground: 'transparent',
+                  tertiaryColor: 'transparent'
+              },
+              flowchart: { nodeSpacing: 120, rankSpacing: 120, padding: 30 },
+              sequence: { messageMargin: 60, actorMargin: 100 }
+          });
+          mermaid.run();
+      });
+    </script>
+    </body></html>`;
 }
 
 function getDynamicScale(itemCount) {
@@ -63,6 +120,11 @@ export function generateSlideHTML(slide) {
     const type = slide.scene_type || "concept_intro";
     const accent = slide.color_accent || "#3b82f6";
     const baseCSS = getBaseCSS(accent);
+    
+    let safeMermaidCode = slide.mermaid_code ? slide.mermaid_code.trim() : '';
+    if (safeMermaidCode && !/^(graph|flowchart|stateDiagram|sequenceDiagram|classDiagram|erDiagram|gantt|pie|gitGraph|journey|mindmap|quadrantChart|xychart-beta)/i.test(safeMermaidCode)) {
+        safeMermaidCode = "graph TD\\n" + safeMermaidCode;
+    }
 
     if (type === "concept_intro" || type === "analogy_visual") {
         const bulletList = slide.bullets || [];
@@ -73,6 +135,7 @@ export function generateSlideHTML(slide) {
                 <div style="text-align: left; line-height: 1.4;">${escHtml(b)}</div>
             </div>
         `).join("");
+
         return wrapHTML(`
             <div class="scene-container" style="align-items: center; text-align: center;">
                 <h1 class="anim-item" style="animation-delay:0.1s">${escHtml(slide.heading)}</h1>
@@ -96,6 +159,12 @@ export function generateSlideHTML(slide) {
     }
 
     if (type === "code_walkthrough") {
+        const lineCount = slide.code_snippet ? slide.code_snippet.split('\\n').length : 0;
+        let codeFontSize = '36px';
+        if (lineCount > 22) codeFontSize = '20px';
+        else if (lineCount > 16) codeFontSize = '24px';
+        else if (lineCount > 12) codeFontSize = '28px';
+        
         // Simple regex-based syntax highlighter for a beautiful VS Code like theme
         let codeHtml = escHtml(slide.code_snippet)
             .replace(/\b(int|float|void|char|struct|class|public|private|return|if|else|for|while)\b/g, '<span style="color:#c678dd">$1</span>')
@@ -107,7 +176,7 @@ export function generateSlideHTML(slide) {
                 <h1 class="anim-item" style="animation-delay:0.1s">${escHtml(slide.heading || "Code Implementation")}</h1>
                 <div class="accent-line anim-item" style="animation-delay:0.2s"></div>
                 <div class="anim-item" style="background:#282c34; padding:40px; border-radius:16px; border-left: 8px solid ${accent}; box-shadow: 0 20px 40px rgba(0,0,0,0.6); animation-delay:0.4s;">
-                    <div style="font-family:'JetBrains Mono', monospace; font-size:36px; line-height:1.6; color:#abb2bf; white-space:pre-wrap;">${codeHtml}</div>
+                    <div style="font-family:'JetBrains Mono', monospace; font-size:${codeFontSize}; line-height:1.6; color:#abb2bf; white-space:pre-wrap;">${codeHtml}</div>
                 </div>
             </div>
         `, baseCSS);
@@ -195,10 +264,31 @@ export function generateSlideHTML(slide) {
     }
     
     if (type === "big_number") {
+        const numStr = String(slide.number || "");
+        let numFontSize = "320px";
+        let shadowSize = "100px";
+        let letterSpacing = "-5px";
+        if (numStr.length > 15) { numFontSize = "100px"; shadowSize = "40px"; letterSpacing = "-2px"; }
+        else if (numStr.length > 10) { numFontSize = "140px"; shadowSize = "50px"; letterSpacing = "-2px"; }
+        else if (numStr.length > 7) { numFontSize = "200px"; shadowSize = "60px"; letterSpacing = "-3px"; }
+        else if (numStr.length > 4) { numFontSize = "260px"; shadowSize = "80px"; letterSpacing = "-4px"; }
+        
         return wrapHTML(`
             <div class="scene-container" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <div class="anim-item" style="font-size: 320px; font-weight: 800; color: #fff; line-height:1; margin-bottom: 30px; text-shadow: 0 0 100px ${accent}aa; animation-delay:0.3s; letter-spacing: -5px;">${escHtml(slide.number)}</div>
-                <div class="anim-item" style="font-size: 64px; font-weight: 500; color: #cbd5e1; letter-spacing: 4px; text-transform: uppercase; animation-delay:0.7s;">${escHtml(slide.label)}</div>
+                <div class="anim-item" style="font-size: ${numFontSize}; font-weight: 800; color: #fff; line-height:1; margin-bottom: 30px; text-shadow: 0 0 ${shadowSize} ${accent}aa; animation-delay:0.3s; letter-spacing: ${letterSpacing}; text-align: center;">${escHtml(numStr)}</div>
+                <div class="anim-item" style="font-size: 64px; font-weight: 500; color: #cbd5e1; letter-spacing: 4px; text-transform: uppercase; animation-delay:0.7s; text-align: center;">${escHtml(slide.label)}</div>
+            </div>
+        `, baseCSS);
+    }
+
+    if (type === "mermaid_diagram") {
+        return wrapHTML(`
+            <div class="scene-container" style="align-items: center; text-align: center;">
+                <h1 class="anim-item" style="animation-delay:0.1s; margin-bottom: 20px;">${escHtml(slide.title || slide.heading || "Architecture")}</h1>
+                <div class="accent-line anim-item" style="animation-delay:0.2s; margin-bottom: 30px;"></div>
+                <div class="anim-item" style="animation-delay:0.3s; width: 100%; max-width: 1700px; height: 80vh; display:flex; justify-content:center; align-items:center; background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 30px; box-shadow: 0 40px 80px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="mermaid">${escMermaid(safeMermaidCode)}</div>
+                </div>
             </div>
         `, baseCSS);
     }

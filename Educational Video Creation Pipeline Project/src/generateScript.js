@@ -65,16 +65,18 @@ export async function generateEducationalScript(topic, tmpDir) {
     7. "pros_cons": title, pros[], cons[], narration_script
        - For trade-offs and expert-level analysis.
     8. "big_number": number, label, narration_script
-       - E.g. "O(log N)" or "100x Faster". Can also be used for the final Call to Action (e.g., number: "Subscribe", label: "To ${channelName} for more tech deep dives").
+       - E.g. "O(log N)" or "100x Faster". Can also be used for the final Call to Action.
     9. "analogy_visual": heading, bullets[], narration_script
        - Used for real-world analogies.
+    10. "mermaid_diagram": heading, mermaid_code, narration_script
+       - A dedicated full-screen graph or flowchart. MUST start with the graph type (e.g., 'graph TD' or 'flowchart LR'). MUST use '\\n' for newlines to properly separate statements, especially for subgraphs. Never write the entire graph on a single line. Do NOT use markdown codeblock backticks inside the string, just the raw Mermaid code.
 
     RULES:
     - Slide narration MUST be engaging, clear, and perfectly timed with the visual elements.
     - Write highly detailed, comprehensive narration. Each slide's narration_script should be at least 3 to 5 sentences long to ensure in-depth explanations.
     - DO NOT rush. Explain the concepts deeply. Total slides MUST be between 15 to 35 depending on topic complexity to guarantee a video length of 5 to 10+ minutes.
     - Ensure factual correctness and technical depth.
-    - Vary the scene_types appropriately to keep visual interest high.
+    - Vary the scene_types appropriately to keep visual interest high. Use 'mermaid_diagram' occasionally when a flowchart or architecture graph is necessary.
     - Color accents should use professional, modern tech colors (e.g. #3b82f6, #10b981, #f59e0b, #6366f1).
     `;
 
