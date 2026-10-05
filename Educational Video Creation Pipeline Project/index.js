@@ -48,12 +48,9 @@ async function main() {
         // Step 1: Generate Deep Script & Visual Layouts via Gemini
         const videoData = await generateEducationalScript(topic, tmpDir);
         console.log(`✅ Script generated! (${videoData.slides.length} structured educational scenes)`);
+        console.log(`   🏷️  Category: ${videoData.topic_category || 'General'} | Difficulty: ${videoData.difficulty_level || 'Mixed'}`);
 
-        // Save SEO Metadata
-        const metadataPath = path.join(outputDir, `${safeTopic}_Metadata.txt`);
-        const metadataContent = `TITLE: ${videoData.youtube_title}\n\nDESCRIPTION:\n${videoData.youtube_description}\n\nTAGS: ${videoData.tags.join(", ")}`;
-        fs.writeFileSync(metadataPath, metadataContent);
-        console.log(`✅ SEO Metadata saved.`);
+        // (Metadata saving moved to end to calculate timestamps)
 
         // Step 2: Generate Audio (Edge-TTS)
         const audioDir = path.join(tmpDir, "audio_files");
@@ -61,11 +58,48 @@ async function main() {
 
         // Step 3: Render HTML/CSS/JS Scenes into Video
         const rawVideoPath = path.join(tmpDir, "raw_video.mp4");
-        await createWebVideo(slidesWithAudio, tmpDir, rawVideoPath);
+        await createWebVideo(slidesWithAudio, tmpDir, rawVideoPath, {
+            topic: topic,
+            topicCategory: videoData.topic_category
+        });
 
         // Step 4: Add Background Music
         const finalVideoPath = path.join(outputDir, `${safeTopic}.mp4`);
         await addBackgroundMusic(rawVideoPath, finalVideoPath, tmpDir, { volume: 0.1 });
+
+        // Step 5: Save High-Quality SEO Metadata
+        let chaptersStr = "CHAPTERS:\n";
+        let currentTime = 0;
+        slidesWithAudio.forEach((slide) => {
+            const m = Math.floor(currentTime / 60);
+            const s = Math.floor(currentTime % 60);
+            const timeStr = `${m}:${s.toString().padStart(2, '0')}`;
+            chaptersStr += `${timeStr} ${slide.title || slide.heading || slide.scene_type || "Scene"}\n`;
+            currentTime += slide.audioDuration || 5;
+        });
+
+        let materialsStr = "📚 Free Study Materials & Resources:\n";
+        if (videoData.study_materials && videoData.study_materials.length > 0) {
+            videoData.study_materials.forEach((m, i) => {
+                materialsStr += `${i+1}. ${m.title}: ${m.url}\n`;
+            });
+        } else {
+            materialsStr += "1. FreeCodeCamp: https://www.freecodecamp.org/\n2. GitHub Topics: https://github.com/topics\n";
+        }
+
+        const metadataPath = path.join(outputDir, `${safeTopic}_Metadata.txt`);
+        const metadataContent = `TITLE: ${videoData.youtube_title}
+
+DESCRIPTION:
+${videoData.youtube_description}
+
+${chaptersStr}
+${materialsStr}
+Follow for more deep-dives into software architecture and tech.
+
+TAGS: ${(videoData.tags || []).join(", ")}`;
+        fs.writeFileSync(metadataPath, metadataContent);
+        console.log(`✅ SEO Metadata saved.`);
 
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`\n🎉 Educational Video Complete in ${totalTime}s!`);

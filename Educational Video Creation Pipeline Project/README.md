@@ -6,18 +6,21 @@ This pipeline is inspired by the professional, cinematic visual styles of channe
 
 ## ✨ Key Features
 
-- **🧠 Deep Educational Structure**: Forces a strict narrative curve: *Hook & Concept -> Deep Dive & Code Implementation -> Practical Industry Examples -> Channel Subscription CTA*.
+- **🧠 Deep Educational Structure**: Forces a strict narrative curve: *Hook & Concept -> Deep Dive & Code Implementation -> Practical Industry Examples -> Key Insights -> Channel Subscription CTA*.
+- **🎨 Dynamic Theme Engine**: Automatically classifies your topic into 10 distinct categories (Systems, Algorithms, Web, AI/ML, Hardware, Security, etc.) and applies a curated, cinematic color palette with dynamic animated backgrounds, particle effects, and typography.
+- **10 Curated Theme Palettes**: Includes specific aesthetic touches and emoji watermarks like ⚡ (Systems), ⌨️ (Programming), 🧠 (AI), 🌐 (Web), and true black Matrix green (Security).
 - **🎥 Cinematic Visuals**: 
-  - Edge-to-edge dark cinematic voids.
-  - Custom `fluidEntrance` spring physics animations with lens blur.
-  - Massive, center-aligned typography and glowing mathematical equations.
-  - Beautiful glass-morphism panels for code walkthroughs.
+  - Staggered multi-phase CSS animations (fluid bouncy entrances, smooth floating elements).
+  - Massive, center-aligned typography with glowing text-shadows and beautiful glass-morphism panels.
+  - Progress bars, timeline nodes, and contextual "bridge text" connecting slides smoothly.
+- **📚 14 Scene Types**: Includes `concept_intro`, `definition`, `code_walkthrough` (with multi-language syntax highlighting), `math_equation`, `step_by_step`, `comparison_table`, `pros_cons`, `big_number`, `mermaid_diagram`, `key_insight`, `timeline`, `quote`, and `recap`.
+- **📐 Dynamic Overflow Auto-Scaling**: The Puppeteer renderer evaluates the DOM structure during rendering and dynamically rewrites CSS `@keyframes` to safely scale down massive code snippets or giant tables so they never clip off the screen.
 - **🔊 Professional Audio & Mixing**: 
   - Uses `edge-tts` for natural, high-quality AI voiceovers.
   - Automatically mixes ambient background music from your local library (perfectly balanced at ~7% volume beneath the narration).
 - **📺 1440p (2K) Output Resolution**: Uses Puppeteer headless rendering at 2.5x scale to guarantee ultra-crisp text and shapes.
-- **🔍 SEO & Study Materials**: Automatically generates YouTube video titles, descriptions, tags, and a curated list of *Free Study Material Links* for viewers to explore.
-- **🤖 Aggressive Auto-Healing**: Built-in JSON repair algorithms to dynamically recover from any LLM hallucination formatting errors.
+- **🔍 SEO & Study Materials**: Automatically generates YouTube video titles, descriptions, tags, and a curated list of *Free Study Material Links*.
+- **🤖 Silent Auto-Healing**: Built-in JSON repair algorithms dynamically (and silently) recover from LLM hallucination formatting errors like trailing commas or missing brackets.
 
 ## 🚀 Getting Started
 
@@ -51,9 +54,6 @@ BG_MUSIC_SOURCE=local_library
 BG_MUSIC_VOLUME=0.065
 ```
 
-### 4. Background Music Setup (Optional)
-To use the local library background music feature, place your MP3/WAV files in the `assets/music/` directory. The pipeline will randomly select one to seamlessly mix under the voiceover.
-
 ## 🎬 Usage
 
 Run the pipeline by simply passing your desired educational topic as an argument:
@@ -69,9 +69,9 @@ node index.js "System Design: Consistent Hashing"
 ```
 
 ### Pipeline Workflow:
-1. **Script Generation**: Gemini generates a structured scene-by-scene script.
+1. **Script Generation**: Gemini classifies the topic, generates a structured scene-by-scene script with deep narration, and includes cohesive transition hooks between slides.
 2. **Audio Generation**: Edge-TTS generates voiceovers for each scene.
-3. **Video Rendering**: Puppeteer renders the HTML/CSS scenes frame-by-frame and exports them via FFmpeg.
+3. **Video Rendering**: Puppeteer renders the HTML/CSS scenes frame-by-frame utilizing the dynamic `themeEngine`, and exports them via FFmpeg.
 4. **Music Mixing**: The final video is stitched together with background music.
 5. **Output**: Your final `.mp4` and `_Metadata.txt` are saved to the `output/` directory!
 
@@ -86,49 +86,25 @@ If you want to generate an entire YouTube course (e.g., a full System Design or 
 > 
 > Please provide a complete, meticulously structured curriculum for a full **[INSERT TOPIC HERE]** course (from beginner to expert). 
 > 
-> For every single video in the course, provide the exact **Context String** I should feed into my pipeline. The context string should be descriptive enough so my AI scriptwriter knows exactly what technical depth and practical examples to cover.
-> 
-> Format your output as a simple, copy-pasteable list of strings, like this:
-> "[Topic] Basics: What is it and Why does it matter?"
-> "Advanced [Topic] Concepts: Trade-offs and Practical Examples"
-> "[Topic] Deep Dive: Algorithms, Architecture, and Real-world usage"
+> For every single video in the course, provide the exact **Context String** I should feed into my pipeline. Format your output as a simple, copy-pasteable list of strings.
 
-## 🖼️ Pro-Tip: Generating Viral Titles & Thumbnails
+## 🎨 Pro-Tip: Generating Professional Thumbnails
 
-Once your video is generated, use this prompt in ChatGPT/Gemini to get highly clickable titles and an AI image generation prompt (for Midjourney or DALL-E) to create the perfect YouTube thumbnail!
+To generate highly clickable, professional thumbnails for your videos (perfect for Midjourney or DALL-E 3), you can use the following prompt. Just replace `[INSERT TOPIC HERE]` with the specific topic of your video.
 
 **Copy and paste this prompt:**
-> I have just created a highly professional, deep-dive educational video about **[INSERT VIDEO TOPIC]**. 
-> I need to package this video for YouTube so it gets a massive Click-Through Rate (CTR).
+> Act as an expert YouTube Thumbnail Designer.
 > 
-> Please provide:
-> 1. **3 Viral Title Options:** Curiosity-driven, highly clickable, and under 60 characters.
-> 2. **Thumbnail Text:** Max 3-4 words of massive, bold text to put on the thumbnail. (It should complement, NOT repeat, the title).
-> 3. **Thumbnail Visual Concept:** Describe the layout, contrasting colors, and focal point.
-> 4. **AI Image Prompt:** A highly detailed prompt I can paste into Midjourney or DALL-E to generate the background art. (Use cinematic lighting, dark backgrounds, glowing tech elements, 8k resolution, and a 16:9 aspect ratio).
-
-## 📱 Pro-Tip: Social Media & Community Promo
-
-Use this prompt to generate engaging promotional posts for Twitter/X, LinkedIn, or your YouTube Community Tab to drive traffic to your new video:
-
-**Copy and paste this prompt:**
-> I just published a deep-dive educational video on **[INSERT VIDEO TOPIC]**. 
-> Please write 3 different promotional posts to drive traffic to this video:
-> 1. A short, highly-engaging **Twitter/X Thread** hook (under 280 characters) that teases a mind-blowing fact about the topic.
-> 2. A professional **LinkedIn Post** focusing on how understanding this topic is critical for career growth and system design interviews.
-> 3. A conversational **YouTube Community Tab Poll** that asks the audience a question related to the topic, and tells them the answer is in the new video.
-
-## 💡 Pro-Tip: Brainstorming Viral Video Series
-
-If you're stuck on what to generate next, use this prompt to build a massive backlog of high-converting video ideas tailored for this exact pipeline:
-
-**Copy and paste this prompt:**
-> I run an educational Tech/CS YouTube channel that produces 3Blue1Brown-style animated deep dives. 
-> I need to build a backlog of video ideas that have extremely high viral potential.
+> I am creating a highly technical, deep-dive educational video about **[INSERT TOPIC HERE]**.
+> Please generate an image with highlighting words as title not everything.
 > 
-> Please generate 5 unique **Video Series** ideas (e.g., "The 'Under the Hood' Series", "10-Minute System Design").
-> For each series, provide 5 specific video topics that I can feed into my automated pipeline.
-> Focus on topics that are highly searched by software engineers, computer science students, and tech enthusiasts.
+> The style should be:
+> - Cinematic, modern, and highly technical.
+> - High contrast (neon colors on dark backgrounds, glassmorphism, 3D elements).
+> - Clean composition, leaving space for bold text (usually on the right or left third).
+> - Abstract but recognizable representations of the topic (e.g., glowing nodes for systems, floating code blocks for programming, neural network patterns for AI).
+> 
+> Focus on lighting, composition, and high-end 3D rendering style (Octane Render, Unreal Engine 5 aesthetic).
 
 ---
 *Built to empower creators to produce high-end educational content at scale.*
