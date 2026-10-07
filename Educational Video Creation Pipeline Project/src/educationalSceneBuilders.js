@@ -212,7 +212,7 @@ function wrapHTML(body, context) {
       import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
       document.fonts.ready.then(() => {
           mermaid.initialize({ 
-              startOnLoad: false, 
+              startOnLoad: false, suppressErrorRendering: true, 
               theme: 'base', 
               themeVariables: { 
                   fontFamily: "${(theme.fontFamily || 'Inter').replace(/\"/g, '\\\"')}",
@@ -229,7 +229,7 @@ function wrapHTML(body, context) {
               flowchart: { nodeSpacing: 100, rankSpacing: 100, padding: 30 },
               sequence: { messageMargin: 60, actorMargin: 100 }
           });
-          mermaid.run().then(() => { window.mermaidRendered = true; });
+          mermaid.run().then(() => { window.mermaidRendered = true; }).catch(e => { document.querySelectorAll('.mermaid').forEach(n => n.innerHTML = '<div style="color: #ff5555; padding: 20px; border: 2px dashed #ff5555; border-radius: 8px; font-family: monospace; font-size: 24px;">[Mermaid Diagram Rendering Error]<br>The diagram syntax could not be parsed.</div>'); window.mermaidRendered = true; });
       });
     </script>
     </body></html>`;
@@ -289,7 +289,7 @@ export function generateSlideHTML(slide, context = {}) {
     const accent = theme.accentColor;
 
     
-    let safeMermaidCode = String(slide.mermaid_code || '').replace(/\\n/g, '\n').trim();
+    let safeMermaidCode = String(slide.mermaid_code || slide.mermaid_diagram || '').replace(/\\n/g, '\n').trim();
     if (safeMermaidCode && !/^(graph|flowchart|stateDiagram|sequenceDiagram|classDiagram|erDiagram|gantt|pie|gitGraph|journey|mindmap|quadrantChart|xychart-beta)/i.test(safeMermaidCode)) {
         safeMermaidCode = "graph TD\n" + safeMermaidCode;
     }
