@@ -27,7 +27,7 @@ export async function generateEducationalScript(topic, tmpDir) {
     The target audience ranges from students to working professionals. 
 
     The video MUST follow this precise narrative structure:
-    1. Cold Open Hook (1 slide): Start with a provocative question or mind-blowing fact. NOT a generic intro.
+    1. Cold Open Hook (1 slide): Start with a provocative question or mind-blowing fact. NOT a generic intro. And avoid the only title hook. Add few relevant bullets to support the hook.
     2. The Problem (1-2 slides): Set up the problem that this topic solves. Make the viewer FEEL the pain point. Use analogies.
     3. Core Concept Introduction (2-3 slides): Introduce the concept with a clear definition and intuitive analogy.
     4. Deep Technical Dive (5-10 slides): The meat. Code, math, step-by-step algorithms, diagrams. Flow logically from simple to complex.
